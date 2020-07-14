@@ -1,0 +1,3 @@
+[submodule "src/submodules/blockcore"]
+	path = src/submodules/blockcore
+	url = https://github.com/block-core/blockcore.git
