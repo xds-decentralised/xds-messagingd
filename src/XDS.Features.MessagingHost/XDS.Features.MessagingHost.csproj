@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\submodules\blockcore\src\Blockcore\Blockcore.csproj" />
+    <ProjectReference Include="..\submodules\blockcore\src\Features\Blockcore.Features.BlockStore\Blockcore.Features.BlockStore.csproj" />
+    <ProjectReference Include="..\submodules\blockcore\src\Features\Blockcore.Features.MemoryPool\Blockcore.Features.MemoryPool.csproj" />
+    <ProjectReference Include="..\submodules\xds-sdk\src\XDS.SDK.Messaging.CrossTierTypes\XDS.SDK.Messaging.CrossTierTypes.csproj" />
+  </ItemGroup>
+
+</Project>
