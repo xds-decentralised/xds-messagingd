@@ -61,7 +61,7 @@ namespace XDS.Features.MessagingHost.Feature
                 if (stats != null)
                 {
                     log.AppendLine();
-                    log.AppendLine($"=======XDS Messaging (Port: {SocketConfig.TcpServerPort}, {TcpAsyncServer.NumConnectedSockets} connections =======");
+                    log.AppendLine($"======= XDS Messaging (Port: {SocketConfig.TcpServerPort}), {TcpAsyncServer.NumConnectedSockets} connections =======");
                     log.AppendLine($"Locally known identities: {stats.IdentitiesCount}");
                     log.AppendLine($"Messages waiting for known identities: {stats.MessagesCount}");
                     log.AppendLine($"Resend Requests: {stats.ResendRequestsCount}");
