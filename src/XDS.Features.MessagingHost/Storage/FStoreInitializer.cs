@@ -5,13 +5,9 @@ namespace XDS.Features.MessagingHost.Storage
 {
 	public static class FStoreInitializer
     {
-	    public static FStoreConfig FStoreConfig;
-
-		public static void InitFStore()
+		public static void InitFStore(FStoreConfig fStoreConfig)
         {
-            var fStore = new FStoreMono(FStoreConfig);
-            if (!fStore.StoreExists())
-                fStore.CreateStore();
+            var fStore = new FStoreMono(fStoreConfig);
 
             var identitiesTable = new FSTable(nameof(XIdentity), IdMode.UserGenerated); // Id is necessary to retrieve an item
             if (!fStore.TableExists(identitiesTable, null))

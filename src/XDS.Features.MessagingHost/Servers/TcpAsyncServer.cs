@@ -17,7 +17,7 @@ namespace XDS.Features.MessagingHost.Servers
 		readonly ILogger logger;
 
 		Socket listenSocket;
-		static int _numConnectedSockets;
+		internal static int NumConnectedSockets;
 
 
 		public TcpAsyncServer(INodeLifetime nodeLifetime, ILoggerFactory loggerFactory, IRequestHandler requestHandler)
@@ -73,7 +73,7 @@ namespace XDS.Features.MessagingHost.Servers
 
 		void ProcessAccept(SocketAsyncEventArgs e)
 		{
-			Interlocked.Increment(ref _numConnectedSockets);
+			Interlocked.Increment(ref NumConnectedSockets);
 
 			SocketAsyncEventArgs args = CreateArgs();
 			((AsyncUserToken)args.UserToken).Socket = e.AcceptSocket;
@@ -82,7 +82,7 @@ namespace XDS.Features.MessagingHost.Servers
             // in release builds, except errors or warnings.
 #if DEBUG
 
-			this.logger.LogInformation($"Connection accepted from {e.AcceptSocket.RemoteEndPoint}. {_numConnectedSockets} connected sockets.");
+			this.logger.LogInformation($"Connection accepted from {e.AcceptSocket.RemoteEndPoint}. {NumConnectedSockets} connected sockets.");
 #endif
 
 			// As soon as the client is connected, post a receive to the connection
@@ -218,11 +218,11 @@ namespace XDS.Features.MessagingHost.Servers
 			finally
 			{
 				// decrement connection counter
-				Interlocked.Decrement(ref _numConnectedSockets);
+				Interlocked.Decrement(ref NumConnectedSockets);
 				this.maxNumberAcceptedClients.Release();
 			}
 #if DEBUG
-			this.logger.LogInformation($"Socket closed, {_numConnectedSockets} connected sockets.");
+			this.logger.LogInformation($"Socket closed, {NumConnectedSockets} connected sockets.");
 #endif
 			// Once we use the buffer manager:
 			// Free the SocketAsyncEventArg for reuse by another client

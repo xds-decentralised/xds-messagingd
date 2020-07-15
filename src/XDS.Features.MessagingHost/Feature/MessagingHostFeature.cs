@@ -34,7 +34,6 @@ namespace XDS.Features.MessagingHost.Feature
         public override Task InitializeAsync()
         {
             AdvertiseMessagingServices();
-            InitializeMessagingRepository();
             StartMessageRelayTcpSever();
 
             return Task.CompletedTask;
@@ -43,11 +42,6 @@ namespace XDS.Features.MessagingHost.Feature
         void StartMessageRelayTcpSever()
         {
             this.tcpAsyncServer.Run();
-        }
-
-        void InitializeMessagingRepository()
-        {
-            FStoreInitializer.InitFStore();
         }
 
         void AdvertiseMessagingServices()
@@ -67,7 +61,7 @@ namespace XDS.Features.MessagingHost.Feature
                 if (stats != null)
                 {
                     log.AppendLine();
-                    log.AppendLine("=======Messaging=======");
+                    log.AppendLine($"=======XDS Messaging (Port: {SocketConfig.TcpServerPort}, {TcpAsyncServer.NumConnectedSockets} connections =======");
                     log.AppendLine($"Locally known identities: {stats.IdentitiesCount}");
                     log.AppendLine($"Messages waiting for known identities: {stats.MessagesCount}");
                     log.AppendLine($"Resend Requests: {stats.ResendRequestsCount}");

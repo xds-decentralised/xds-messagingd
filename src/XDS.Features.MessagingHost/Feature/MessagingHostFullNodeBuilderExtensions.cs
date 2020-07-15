@@ -19,12 +19,14 @@ namespace XDS.Features.MessagingHost.Feature
         {
             LoggingConfiguration.RegisterFeatureNamespace<MessagingHostFeature>(nameof(MessagingHostFeature));
            
-            FStoreInitializer.FStoreConfig = new FStoreConfig
+            var fStoreConfig = new FStoreConfig
             {
                 DefaultStoreName = "FStore",
                 StoreLocation = new DirectoryInfo(Path.Combine(fullNodeBuilder.NodeSettings.DataDir, "messaging")),
                 Initializer = FStoreInitializer.InitFStore
             };
+
+            FStoreInitializer.InitFStore(fStoreConfig); 
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
@@ -32,6 +34,7 @@ namespace XDS.Features.MessagingHost.Feature
                     .AddFeature<MessagingHostFeature>()
                     .FeatureServices(services =>
                     {
+                        services.AddSingleton(fStoreConfig);
                         services.AddSingleton<IMessageNodeRepository, MessageNodeRepository>();
                         services.AddTransient<CommandProcessor>();
                         services.AddSingleton<IRequestHandler, NoTLSRequestHandler>();

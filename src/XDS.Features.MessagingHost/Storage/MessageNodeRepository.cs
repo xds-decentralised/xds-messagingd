@@ -16,18 +16,21 @@ namespace XDS.Features.MessagingHost.Storage
     {
         static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
 
-        readonly IAsyncRepository<XIdentity> identitiesRepository = new FStoreRepository<XIdentity>(new FStoreMono(FStoreInitializer.FStoreConfig), XIdentityExtensions.SerializeXIdentity, XIdentityExtensions.DeserializeXIdentityCore);
-        readonly IAsyncRepository<XMessage> messagesRepository = new FStoreRepository<XMessage>(new FStoreMono(FStoreInitializer.FStoreConfig), XMessageExtensions.SerializeCore, XMessageExtensions.DeserializeMessage);
-        readonly IAsyncRepository<XResendRequest> resendRequestsRepository = new FStoreRepository<XResendRequest>(new FStoreMono(FStoreInitializer.FStoreConfig), XResendRequestExtensions.Serialize, XResendRequestExtensions.DeserializeResendRequest);
+        readonly IAsyncRepository<XIdentity> identitiesRepository;
+        readonly IAsyncRepository<XMessage> messagesRepository;
+        readonly IAsyncRepository<XResendRequest> resendRequestsRepository;
         readonly ILogger logger;
         readonly Stopwatch statsWatch;
 
         int totalMessagesReceived;
         int totalMessagesDelivered;
 
-        public MessageNodeRepository(ILoggerFactory loggerFactory)
+        public MessageNodeRepository(ILoggerFactory loggerFactory, FStoreConfig fStoreConfig)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
+            this.identitiesRepository = new FStoreRepository<XIdentity>(new FStoreMono(fStoreConfig), XIdentityExtensions.SerializeXIdentity, XIdentityExtensions.DeserializeXIdentityCore);
+            this.messagesRepository = new FStoreRepository<XMessage>(new FStoreMono(fStoreConfig), XMessageExtensions.SerializeCore, XMessageExtensions.DeserializeMessage);
+            this.resendRequestsRepository = new FStoreRepository<XResendRequest>(new FStoreMono(fStoreConfig), XResendRequestExtensions.Serialize, XResendRequestExtensions.DeserializeResendRequest);
             this.statsWatch = new Stopwatch();
         }
 
