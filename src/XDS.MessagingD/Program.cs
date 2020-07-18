@@ -14,6 +14,7 @@ using Blockcore.Features.RPC;
 using Blockcore.Networks.Xds;
 using Blockcore.Utilities;
 using XDS.Features.MessagingHost.Feature;
+using XDS.Features.MessagingInfrastructure.Feature;
 
 namespace XDS.MessagingD
 {
@@ -45,7 +46,8 @@ namespace XDS.MessagingD
                     .UseNodeHost()
                     .AddRPC()
                     .UseDiagnosticFeature()
-                    .UseMessagingHost();
+                    .UseMessagingHost()
+                    .UseMessagingInfrastructure();
 
                 await nodeBuilder.Build().RunAsync();
             }

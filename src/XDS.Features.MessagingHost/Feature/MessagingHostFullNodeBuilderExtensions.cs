@@ -39,7 +39,6 @@ namespace XDS.Features.MessagingHost.Feature
                         services.AddTransient<CommandProcessor>();
                         services.AddSingleton<IRequestHandler, NoTLSRequestHandler>();
                         services.AddTransient<TcpAsyncServer>();
-
                     });
             });
 
