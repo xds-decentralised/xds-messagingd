@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet;
+using XDS.Features.MessagingInfrastructure.Model;
 using XDS.Features.MessagingInfrastructure.Tools;
 
 namespace XDS.Features.MessagingInfrastructure.Addresses
@@ -18,9 +17,24 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             this.logger = loggerFactory.CreateLogger<AddressService>();
         }
 
-        public ISegWitAddress FindAddressInIndex(string bech32)
+        public IndexUtxo FindUtxo(Hash256 txId, int n)
         {
-            var equalValue = new IndexEntry
+            var entries = this.xdsAddressIndex.Entries;
+            foreach (var entry in entries)
+            {
+                foreach (var utxo in entry.Received)
+                {
+                    if (utxo.Index == n && utxo.HashTx == txId)
+                        return utxo;
+                }
+            }
+
+            return null;
+        }
+
+        public IndexEntry FindAddressInIndex(string bech32)
+        {
+            var equalValue = new IndexEntry(bech32)
             {
                 Address = bech32
             };
@@ -30,9 +44,9 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             return address;
         }
 
-        public ISegWitAddress GetOrAddAnyonesAddress(string bech32, int blockHeight)
+        public IndexEntry GetOrCreateAddressInIndex(string bech32, int blockHeight)
         {
-            var address = FindAddressInIndex(bech32) as IndexEntry;
+            var address = FindAddressInIndex(bech32);
             
 
             if (address != null)
@@ -43,20 +57,16 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             {
                 if (bech32 == "unspendable")
                 {
-                    address = new IndexEntry
+                    address = new IndexEntry(bech32)
                     {
-                        AddressType = AddressType.MatchAll,
-                        ScriptPubKeyHex = null,
                         Address = bech32,
                         LastSeenHeight = blockHeight
                     };
                 }
                 else
                 {
-                    address = new IndexEntry
+                    address = new IndexEntry(bech32)
                     {
-                        AddressType = AddressType.MatchAll,
-                        ScriptPubKeyHex = bech32.GetScriptPubKey().ToHex(),
                         Address = bech32,
                         LastSeenHeight = blockHeight
                     };

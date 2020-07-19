@@ -1,12 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using XDS.SDK.Cryptography;
 
-namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs
+namespace XDS.Features.MessagingInfrastructure.Model
 {
-    public class Hash256
+    public class Hash256 : IEquatable<Hash256>
     {
         public const int Length = 32;
 
@@ -14,13 +14,10 @@ namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs
 
         public readonly byte[] Value;
 
-        int hashCode;
-        string str;
-
         public Hash256(byte[] bytes)
         {
             if (bytes == null || bytes.Length != Length)
-                throw new ArgumentException($"Expecting a byte[] of lenght {Length}");
+                throw new ArgumentException($"Expecting a byte[] of length {Length}");
             this.Value = bytes;
         }
 
@@ -29,22 +26,17 @@ namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs
             if (obj == null)
                 return false;
 
-            return obj is Hash256 hash && hash.Value != null && IsEqual(hash.Value, this.Value);
+            return obj is Hash256 hash && IsEqual(hash.Value, this.Value);
         }
 
         public override int GetHashCode()
         {
-            if (this.hashCode != 0)
-                return this.hashCode;
-
-            for (var i = 0; i < Length / 4; i += 4)
-                this.hashCode ^= BitConverter.ToInt32(this.Value, i);
-            return this.hashCode;
+            return BitConverter.ToInt32(this.Value, 0);
         }
 
         public static bool operator ==(Hash256 left, Hash256 right)
         {
-            if (ReferenceEquals(left, null) && ReferenceEquals(right, null))
+            if (ReferenceEquals(left, right))
                 return true;
 
             if (!ReferenceEquals(left, null) && !ReferenceEquals(right, null))
@@ -71,6 +63,14 @@ namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs
                 if (arr1[i] != arr2[i])
                     return false;
             return true;
+        }
+
+        public bool Equals([AllowNull] Hash256 other)
+        {
+            if (other == null)
+                return false;
+
+            return ReferenceEquals(this, other) || IsEqual(this.Value, other.Value);
         }
     }
 }

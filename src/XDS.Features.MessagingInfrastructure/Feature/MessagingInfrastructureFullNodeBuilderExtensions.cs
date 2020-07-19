@@ -2,7 +2,7 @@
 using Blockcore.Builder;
 using Blockcore.Configuration.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Json;
+using XDS.Features.MessagingInfrastructure.Addresses;
 using XDS.Features.MessagingInfrastructure.Tools;
 
 namespace XDS.Features.MessagingInfrastructure.Feature
@@ -25,7 +25,6 @@ namespace XDS.Features.MessagingInfrastructure.Feature
                     .FeatureServices(services =>
                     {
                         services.AddSingleton<BlockchainLookup>();
-                        services.AddSingleton<ItemPropagation>();
                         services.AddSingleton<IndexFileHelper>();
                         services.AddSingleton<IJsonSerializer, X1WalletFileJsonSerializer>();
                     });

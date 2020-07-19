@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using NBitcoin;
 using Utf8Json;
 using Utf8Json.Resolvers;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Json;
+using XDS.Features.MessagingInfrastructure.Addresses;
+using XDS.Features.MessagingInfrastructure.Model;
 using XDS.SDK.Cryptography;
 
 namespace XDS.Features.MessagingInfrastructure

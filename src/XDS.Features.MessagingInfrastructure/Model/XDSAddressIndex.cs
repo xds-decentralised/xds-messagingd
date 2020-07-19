@@ -1,13 +1,12 @@
-﻿using System.Collections.Concurrent;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
+﻿using System.Collections.Generic;
 
-namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet
+namespace XDS.Features.MessagingInfrastructure.Model
 {
-    public sealed class XDSBlockIndex
+    public class XDSAddressIndex
     {
-        public XDSBlockIndex()
+        public XDSAddressIndex()
         {
-            this.Blocks = new ConcurrentDictionary<int, BlockMetadata>();
+            this.Entries = new HashSet<IndexEntry>();
         }
 
         public int Version { get; set; }
@@ -35,7 +34,6 @@ namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet
 
         public int CheckpointHeight { get; set; }
 
-        public ConcurrentDictionary<int, BlockMetadata> Blocks { get; set; }
-
+        public HashSet<IndexEntry> Entries { get; set; }
     }
 }

@@ -52,7 +52,7 @@ namespace XDS.Features.MessagingInfrastructure.Feature
                     log.AppendLine($"Synced Height: {this.blockchainLookup.GetSyncedHeight()}");
                     log.AppendLine($"Addresses: {this.blockchainLookup.GetAddressCount()}");
                     log.AppendLine($"Process Block Cost: {this.blockchainLookup.ProcessBlockMS} ms");
-                    if (!this.blockchainLookup.IsStartingUp || this.count++ % 10 == 0)
+                    if (!this.blockchainLookup.IsStartingUp || this.count++ % 2 == 0)
                     {
                         this.sw.Restart();
                         log.AppendLine($"Network Balance: {this.blockchainLookup.GetNetworkBalance()}");

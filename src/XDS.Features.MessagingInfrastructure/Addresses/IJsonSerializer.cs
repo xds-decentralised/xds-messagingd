@@ -1,5 +1,5 @@
 ﻿
-namespace XDS.Features.MessagingInfrastructure.Infrastructure.Common.Json
+namespace XDS.Features.MessagingInfrastructure.Addresses
 {
     public interface IJsonSerializer
     {

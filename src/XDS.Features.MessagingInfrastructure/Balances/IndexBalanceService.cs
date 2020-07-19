@@ -5,8 +5,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using NBitcoin;
 using XDS.Features.MessagingInfrastructure.Addresses;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet;
+using XDS.Features.MessagingInfrastructure.Model;
 using XDS.Features.MessagingInfrastructure.Tools;
 
 namespace XDS.Features.MessagingInfrastructure.Balances
@@ -89,7 +88,7 @@ namespace XDS.Features.MessagingInfrastructure.Balances
 
         public static IndexAddressBalance GetBalance(HashSet<IndexEntry> indexEntries, int asOfBlockHeight, string address)
         {
-            if (!indexEntries.TryGetValue(new IndexEntry { Address = address }, out IndexEntry indexEntry))
+            if (!indexEntries.TryGetValue(new IndexEntry(address) { Address = address }, out IndexEntry indexEntry))
                 return null;
 
             var balance = new IndexAddressBalance(asOfBlockHeight, address);

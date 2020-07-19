@@ -4,9 +4,9 @@ using System.IO;
 using Blockcore.Configuration;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using XDS.Features.MessagingInfrastructure.Addresses;
 using XDS.Features.MessagingInfrastructure.Blockchain;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Json;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet;
+using XDS.Features.MessagingInfrastructure.Model;
 
 namespace XDS.Features.MessagingInfrastructure.Tools
 {
@@ -19,10 +19,8 @@ namespace XDS.Features.MessagingInfrastructure.Tools
         readonly Stopwatch stopWatchSaving;
 
         const string AddressIndexFilename = "addressindex.json";
-        const string BlockIndexFilename = "blockindex.json";
 
         readonly string addressIndexFilePath;
-        readonly string blockIndexFilePath;
 
         DateTime lastSaved;
 
@@ -32,17 +30,16 @@ namespace XDS.Features.MessagingInfrastructure.Tools
             this.logger = loggerFactory.CreateLogger<IndexFileHelper>();
             this.stopWatchSaving = new Stopwatch();
             this.addressIndexFilePath = Path.Combine(nodeSettings.DataDir, AddressIndexFilename);
-            this.blockIndexFilePath = Path.Combine(nodeSettings.DataDir, BlockIndexFilename);
             this.network = network;
         }
 
-        public (XDSAddressIndex, XDSBlockIndex) LoadIndexes()
+        public XDSAddressIndex LoadIndex()
         {
-            if (!File.Exists(this.addressIndexFilePath) || !File.Exists(this.blockIndexFilePath))
+            if (!File.Exists(this.addressIndexFilePath))
             {
-                DeleteIndexes();
-                var result = CreateIndexes();
-                SaveIndexes(result.Item1, result.Item2, true);
+                DeleteIndex();
+                var result = CreateIndex();
+                SaveIndex(result, true);
             }
 
             try
@@ -50,24 +47,18 @@ namespace XDS.Features.MessagingInfrastructure.Tools
                 byte[] file = File.ReadAllBytes(this.addressIndexFilePath);
                 var addressIndex = this.jsonSerializer.Deserialize<XDSAddressIndex>(file);
 
-                file = File.ReadAllBytes(this.blockIndexFilePath);
-                var blockIndex = this.jsonSerializer.Deserialize<XDSBlockIndex>(file);
-
-                if(addressIndex.IndexIdentifier != blockIndex.IndexIdentifier)
-                    throw new InvalidOperationException("Index identifiers are supposed to match!");
-
-                return (addressIndex, blockIndex);
+                return addressIndex;
             }
             catch (Exception e)
             {
                 this.logger.LogError(e.Message);
-                DeleteIndexes();
-                return LoadIndexes();
+                DeleteIndex();
+                return LoadIndex();
             }
 
         }
 
-        public void SaveIndexes(XDSAddressIndex xdsAddressIndex, XDSBlockIndex xdsBlockIndex, bool force)
+        public void SaveIndex(XDSAddressIndex xdsAddressIndex, bool force)
         {
             if (DateTime.Now - this.lastSaved < TimeSpan.FromSeconds(60) && force == false)
                 return;
@@ -76,27 +67,18 @@ namespace XDS.Features.MessagingInfrastructure.Tools
 
             this.stopWatchSaving.Restart();
 
-            var serialized = this.jsonSerializer.Serialize(xdsBlockIndex);
-            File.WriteAllBytes(this.blockIndexFilePath, serialized);
-
-            serialized = this.jsonSerializer.Serialize(xdsAddressIndex);
+            var serialized = this.jsonSerializer.Serialize(xdsAddressIndex);
             File.WriteAllBytes(this.addressIndexFilePath, serialized);
 
-            this.logger.LogInformation($"Saved indexes at height {xdsBlockIndex.SyncedHeight} - {serialized.Length} bytes, {this.stopWatchSaving.ElapsedMilliseconds} ms.");
+            this.logger.LogInformation($"Saved indexe at height {xdsAddressIndex.SyncedHeight} - {serialized.Length} bytes, {this.stopWatchSaving.ElapsedMilliseconds} ms.");
         }
 
-        (XDSAddressIndex, XDSBlockIndex) CreateIndexes()
+        XDSAddressIndex CreateIndex()
         {
             var now = DateTimeOffset.UtcNow;
             var identifier = Guid.NewGuid().ToString();
 
             var addressIndex = new XDSAddressIndex
-            {
-                IndexIdentifier = identifier,
-
-            };
-
-            var blockIndex = new XDSBlockIndex
             {
                 Version = 1,
                 IndexIdentifier = identifier,
@@ -104,26 +86,19 @@ namespace XDS.Features.MessagingInfrastructure.Tools
                 ModifiedUtc = now.ToUnixTimeSeconds(),
                 CheckpointHash = this.network.GenesisHash.ToHash256(),
                 SyncedHash = this.network.GenesisHash.ToHash256(),
+
             };
 
-            return (addressIndex, blockIndex);
+
+            return addressIndex;
         }
 
-        void DeleteIndexes()
+        void DeleteIndex()
         {
             try
             {
                 if (File.Exists(this.addressIndexFilePath))
                     File.Delete(this.addressIndexFilePath);
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError(e.Message);
-            }
-            try
-            {
-                if (File.Exists(this.blockIndexFilePath))
-                    File.Delete(this.blockIndexFilePath);
             }
             catch (Exception e)
             {

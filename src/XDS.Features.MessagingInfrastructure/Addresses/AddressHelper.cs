@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using XDS.Features.MessagingInfrastructure.Feature;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
 using XDS.Features.MessagingInfrastructure.Tools;
+using Extensions = XDS.Features.MessagingInfrastructure.Tools.Extensions;
 
 namespace XDS.Features.MessagingInfrastructure.Addresses
 {
@@ -28,10 +28,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             ScriptAddressPrefix = Encoding.ASCII.GetString(network.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS].HumanReadablePart) + "1";
         }
 
-        public static Script GetScriptPubKey(this ISegWitAddress address)
-        {
-            return GetScriptPubKey(address.Address);
-        }
+       
 
         public static Script GetScriptPubKey(this string bech32Address)
         {
@@ -41,7 +38,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             if (bech32Address.Length == Constants.PubKeyHashAddressLength && bech32Address.StartsWith(PubKeyAddressPrefix))
             {
                 var hash160 = PubKeyAddressEncoder.Decode(bech32Address, out var witnessVersion);
-                KeyHelper.CheckBytes(hash160, 20);
+                Extensions.CheckBytes(hash160, 20);
 
                 if (witnessVersion != 0)
                     InvalidAddress(bech32Address);
@@ -52,7 +49,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             if (bech32Address.Length == Constants.ScriptAddressLength && bech32Address.StartsWith(ScriptAddressPrefix))
             {
                 var hash256 = PubKeyAddressEncoder.Decode(bech32Address, out var witnessVersion);
-                KeyHelper.CheckBytes(hash256, 32);
+                Extensions.CheckBytes(hash256, 32);
 
                 if (witnessVersion != 0)
                     InvalidAddress(bech32Address);
@@ -146,43 +143,19 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
 
         public static string ToPubKeyHashAddress(this byte[] hash160)
         {
-            KeyHelper.CheckBytes(hash160, 20);
+            Extensions.CheckBytes(hash160, 20);
 
             return PubKeyAddressEncoder.Encode(0, hash160);
         }
 
         public static string ToScriptAddress(this byte[] hash256)
         {
-            KeyHelper.CheckBytes(hash256, 32);
+            Extensions.CheckBytes(hash256, 32);
 
             return ScriptAddressEncoder.Encode(0, hash256);
         }
 
-        public static ISegWitAddress Match(this ISegWitAddress segWitAddress, string address = null, AddressType addressType = AddressType.MatchAll)
-        {
-            if (segWitAddress == null)  // no op
-                return null;
-
-            if (address != null) // filter by address
-            {
-                if (segWitAddress.Address == address)
-                {
-                    if (addressType == AddressType.MatchAll || addressType == segWitAddress.AddressType)
-                        return segWitAddress;
-                    return null;
-                }
-                return null;
-            }
-
-            // do not filter by address
-            if (addressType == AddressType.MatchAll)
-                return segWitAddress;
-
-            if (addressType == segWitAddress.AddressType)
-                return segWitAddress;
-
-            return null;
-        }
+       
 
         static X1RunnerException InvalidAddress(string input, Exception innerException = null)
         {

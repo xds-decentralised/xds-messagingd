@@ -1,9 +1,14 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.DTOs;
-using XDS.Features.MessagingInfrastructure.Infrastructure.Common.Wallet;
+using NBitcoin;
+using XDS.Features.MessagingInfrastructure.Feature;
+using XDS.Features.MessagingInfrastructure.Model;
+using XDS.SDK.Cryptography;
+using XDS.SDK.Cryptography.Api.Infrastructure;
 
 namespace XDS.Features.MessagingInfrastructure.Tools
 {
@@ -38,11 +43,7 @@ namespace XDS.Features.MessagingInfrastructure.Tools
             return $"{version.Major}.{version.Minor}.{version.Build}";
         }
 
-        public static bool HasCoinbaseMaturity(this TxType txType)
-        {
-            var type = (int)txType;
-            return type > 0 && type < 30;
-        }
+       
 
         /// <summary>
         /// Adds the item to the dictionary by overwriting the old value, and logging the occurence of the duplicate key as error. 
@@ -52,6 +53,57 @@ namespace XDS.Features.MessagingInfrastructure.Tools
             if (dictionary.ContainsKey(key))
                 _logger.LogError($"The key '{key}' was already present in the dictionary. Method: {memberName}, Line: {line}");
             dictionary[key] = value;
+        }
+
+        public static void NotNull<T>(ref HashSet<T> list, int capacity)
+        {
+            if (list == null)
+                list = new HashSet<T>(capacity);
+        }
+
+        public static void NotNull<K, T>(ref Dictionary<K, T> list, int capacity)
+        {
+            if (list == null)
+                list = new Dictionary<K, T>(capacity);
+        }
+
+        public static void CheckBytes(byte[] bytes, int expectedLength)
+        {
+            if (bytes == null || bytes.Length != expectedLength || bytes.All(b => b == bytes[0]))
+            {
+                var display = bytes == null ? "null" : bytes.ToHexString();
+                var message =
+                    $"Suspicious byte array '{display}', it does not look like a cryptographic key or hash, please investigate. Expected lenght was {expectedLength}.";
+                throw new X1RunnerException(HttpStatusCode.BadRequest, message);
+            }
+        }
+
+        public static bool IsEqualTo(this Hash256 hash256, uint256 uint256)
+        {
+            if (hash256 == null && uint256 == null)
+                return true;
+
+            if (hash256 != null && uint256 != null)
+                return ByteArrays.AreAllBytesEqual(hash256.Value, uint256.ToBytes());
+            return false;
+        }
+
+        public static Hash256 GetHash256(this Transaction transaction)
+        {
+            return new Hash256(transaction.GetHash().ToBytes());
+        }
+
+        public static Hash256 GetHash256(this Block block)
+        {
+            return new Hash256(block.GetHash().ToBytes());
+        }
+
+        public static Hash256 ToHash256(this uint256 uint256)
+        {
+            if (uint256 == null)
+                return null;
+
+            return new Hash256(uint256.ToBytes());
         }
     }
 }
