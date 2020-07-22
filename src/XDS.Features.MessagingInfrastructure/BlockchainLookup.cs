@@ -33,41 +33,35 @@ namespace XDS.Features.MessagingInfrastructure
 
         readonly XDSAddressIndex addressIndex;
         readonly AddressService addressService;
-        IInitialBlockDownloadState initialBlockDownloadState;
-        Network network;
-        INodeLifetime nodeLifetime;
-        IndexFileHelper indexFileHelper;
-        NodeSettings nodeSettings;
-        ISignals signals;
+        readonly IInitialBlockDownloadState initialBlockDownloadState;
+        readonly Network network;
+        readonly INodeLifetime nodeLifetime;
+       
+        readonly ISignals signals;
+        readonly IndexFileHelper indexFileHelper;
+
         public bool IsStartingUp = true;
         private SubscriptionToken blockConnectedSubscription;
-        private SubscriptionToken transactionReceivedSubscription;
 
 
         public BlockchainLookup(ILoggerFactory loggerFactory, ChainIndexer chainIndexer, IBlockStore blockStore, ISignals signals, IndexFileHelper indexFileHelper, IInitialBlockDownloadState initialBlockDownloadState, Network network, INodeLifetime nodeLifetime, NodeSettings nodeSettings)
         {
-            this.network = network;
-            this.indexFileHelper = indexFileHelper;
-
-            this.addressIndex = indexFileHelper.LoadIndex();
-
-
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.chainIndexer = chainIndexer;
             this.blockStore = blockStore;
+            this.nodeLifetime = nodeLifetime;
+            this.signals = signals;
+            this.network = network;
+            this.initialBlockDownloadState = initialBlockDownloadState;
 
+            this.indexFileHelper = indexFileHelper;
             AddressHelper.Init(network, loggerFactory);
             IndexBalanceService.Init(network);
 
             Tools.Extensions.Init(loggerFactory);
-
+            this.addressIndex = indexFileHelper.LoadIndex();
             this.addressService = new AddressService(this.addressIndex, indexFileHelper, loggerFactory);
-            this.initialBlockDownloadState = initialBlockDownloadState;
-
-            this.nodeLifetime = nodeLifetime;
-
-            this.nodeSettings = nodeSettings;
-            this.signals = signals;
+           
 
             Task.Run(() =>
             {
@@ -196,7 +190,7 @@ namespace XDS.Features.MessagingInfrastructure
         void RemoveBlocks(ChainedHeader checkpointHeader)
         {
             var entries = this.addressIndex.Entries.ToList();
-            for (var i=0; i<entries.Count; i++ )
+            for (var i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
                 List<IndexUtxo> deleteReceived = new List<IndexUtxo>();
@@ -204,6 +198,15 @@ namespace XDS.Features.MessagingInfrastructure
                 {
                     if (utxo.BlockHeight > checkpointHeader.Height)
                         deleteReceived.Add(utxo);
+                    else
+                    {
+                        if (utxo.SpendingHeight > checkpointHeader.Height)
+                        {
+                            utxo.SpendingTx = null;
+                            utxo.SpendingHeight = 0;
+                            utxo.SpendingN = 0;
+                        }
+                    }
                 }
 
                 foreach (var utxo in deleteReceived)
@@ -211,23 +214,11 @@ namespace XDS.Features.MessagingInfrastructure
                     entry.Received.Remove(utxo);
                 }
 
-                List<IndexUtxo> deleteSpent = new List<IndexUtxo>();
-                foreach (var utxo in entry.Spent)
-                {
-                    if (utxo.BlockHeight > checkpointHeader.Height)
-                        deleteSpent.Add(utxo);
-                }
-
-                foreach (var utxo in deleteSpent)
-                {
-                    entry.Spent.Remove(utxo);
-                }
-
-                if (entry.Spent.Count == 0 && entry.Received.Count == 0)
+                if (entry.Received.Count == 0)
                     this.addressIndex.Entries.Remove(entry);
             }
 
-          
+
 
             // Update last block synced height
             this.addressIndex.SyncedHeight = checkpointHeader.Height;
@@ -277,8 +268,8 @@ namespace XDS.Features.MessagingInfrastructure
             return this.addressIndex.SyncedHash;
         }
 
-        
-      
+
+
 
         void SaveMetadata(int height, Hash256 hashBlock, bool force)
         {
@@ -344,7 +335,7 @@ namespace XDS.Features.MessagingInfrastructure
                         //if (networkBalance != expectedBalance)
                         //    ;
                     }
-                    
+
                 }
             }
             catch (Exception e)
@@ -374,7 +365,7 @@ namespace XDS.Features.MessagingInfrastructure
             this.stopwatchProcessBlock.Restart();
 
             BlockService.AnalyzeBlock(block, height, this.addressService.GetOrCreateAddressInIndex, this.addressService.FindUtxo);
-           
+
             this.ProcessBlockMS = this.stopwatchProcessBlock.ElapsedMilliseconds;
 
             SaveMetadata(height, hashBlock, force: false);

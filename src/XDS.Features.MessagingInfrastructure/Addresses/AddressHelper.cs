@@ -28,7 +28,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             ScriptAddressPrefix = Encoding.ASCII.GetString(network.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS].HumanReadablePart) + "1";
         }
 
-       
+
 
         public static Script GetScriptPubKey(this string bech32Address)
         {
@@ -106,15 +106,12 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
                     var hash256 = raw.Skip(2).Take(32).ToArray();
                     address = hash256.ToScriptAddress();
                     break;
-                // everything else is unwanted, but log exactly what it was
+                // treat all else as unspendable
                 default:
-                {
-                    address = "unspendable";
-                        //Log.Logger.LogDebug($"GetAddressFromScriptPubKey: SuspiciousscriptPubKey: {scriptPubKey}");
+                    {
+                        address = "unspendable";
                         break;
                     }
-
-                    //throw InvalidScriptPubKey(scriptPubKey);
             }
 
             return address;
@@ -135,7 +132,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
                 if (txOut.ScriptPubKey.IsEmpty())
                     return true; // this normally the empty first output (PoS marker)
                 if (txOut.ScriptPubKey.IsOpReturn())
-                    return true; // this is the public key, for ODX at index 1 in a coinstake tx
+                    return true; // this is the public key, for XDS at index 1 in a coinstake tx
             }
 
             return false;
@@ -155,7 +152,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             return ScriptAddressEncoder.Encode(0, hash256);
         }
 
-       
+
 
         static X1RunnerException InvalidAddress(string input, Exception innerException = null)
         {
@@ -171,5 +168,5 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
 
     }
 
-    
+
 }

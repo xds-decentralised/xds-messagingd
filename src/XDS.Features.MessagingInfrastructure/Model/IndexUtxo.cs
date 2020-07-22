@@ -5,15 +5,6 @@ namespace XDS.Features.MessagingInfrastructure.Model
 {
     public class IndexUtxo : IEquatable<IndexUtxo>
     {
-        public IndexUtxo(string address)
-        {
-            if(address == null)
-                throw new ArgumentNullException();
-            this.Address = address;
-        }
-
-        public string Address { get; set; }
-
         public int BlockHeight { get; set; }
 
         public int Index { get; set; }
@@ -26,8 +17,14 @@ namespace XDS.Features.MessagingInfrastructure.Model
 
         public Hash256 SpendingTx { get; set; }
 
+        /// <summary>
+        /// Value is only valid if SpendingTx is not null.
+        /// </summary>
         public int SpendingN { get; set; }
 
+        /// <summary>
+        /// Value is only valid if SpendingTx is not null.
+        /// </summary>
         public int SpendingHeight { get; set; }
 
 

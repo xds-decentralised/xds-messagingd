@@ -11,7 +11,6 @@ namespace XDS.Features.MessagingInfrastructure.Model
                 throw new ArgumentNullException(nameof(address));
 
             this.Received = new HashSet<IndexUtxo>();
-            this.Spent = new HashSet<IndexUtxo>();
         }
 
         /// <summary>
@@ -20,9 +19,6 @@ namespace XDS.Features.MessagingInfrastructure.Model
         public string Address { get; set; }
 
         public HashSet<IndexUtxo> Received { get; set; }
-
-        public HashSet<IndexUtxo> Spent { get; set; }
-
 
         public int? LastSeenHeight { get; set; }
 
@@ -58,7 +54,7 @@ namespace XDS.Features.MessagingInfrastructure.Model
 
         public override string ToString()
         {
-            return this.Address ?? "null";
+            return this.Address;
         }
        
     }
