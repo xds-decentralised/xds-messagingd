@@ -163,6 +163,7 @@ namespace XDS.Features.ItemForwarding.Client
                     {
                         this.logger.LogError(
                             $"Error while attempting to push {identities.Count} identities to peer {connectedInstance}: {e.Message}");
+                        await HandleFailedConnectedPeerAsync(e, connectedInstance);
                     }
                     finally
                     {
