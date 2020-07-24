@@ -1,4 +1,5 @@
-﻿using XDS.SDK.Messaging.CrossTierTypes;
+﻿using XDS.Features.ItemForwarding.Client.Data;
+using XDS.SDK.Messaging.CrossTierTypes;
 using XDS.SDK.Messaging.CrossTierTypes.FStore;
 
 namespace XDS.Features.MessagingHost.Storage
@@ -23,6 +24,11 @@ namespace XDS.Features.MessagingHost.Storage
 	        if (!fStore.TableExists(resendRequestsTable, null))
 		        fStore.CreateTable(resendRequestsTable);
 	        FStoreTables.TableConfig[typeof(XResendRequest)] = resendRequestsTable;
-		}
+
+            var messageRelayRecordsTable = new FSTable(nameof(MessageRelayRecord), IdMode.UserGenerated); // Id is necessary to retrieve an item
+            if (!fStore.TableExists(messageRelayRecordsTable, null))
+                fStore.CreateTable(messageRelayRecordsTable);
+            FStoreTables.TableConfig[typeof(MessageRelayRecord)] = messageRelayRecordsTable;
+        }
     }
 }

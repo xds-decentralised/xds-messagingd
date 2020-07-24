@@ -3,7 +3,9 @@ using Blockcore.Builder;
 using Blockcore.Configuration.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using XDS.Features.MessagingInfrastructure.Addresses;
+using XDS.Features.MessagingInfrastructure.PhotonServices;
 using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
 namespace XDS.Features.MessagingInfrastructure.Feature
 {
@@ -27,6 +29,7 @@ namespace XDS.Features.MessagingInfrastructure.Feature
                         services.AddSingleton<BlockchainLookup>();
                         services.AddSingleton<IndexFileHelper>();
                         services.AddSingleton<IJsonSerializer, X1WalletFileJsonSerializer>();
+                        services.AddSingleton<IPhotonService, DefaultPhotonService>();
                     });
             });
 

@@ -2,6 +2,7 @@
 using Blockcore.Builder;
 using Blockcore.Configuration.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using XDS.Features.ItemForwarding.Client.Data;
 using XDS.Features.MessagingHost.RequestHandler;
 using XDS.Features.MessagingHost.Servers;
 using XDS.Features.MessagingHost.Storage;
@@ -36,6 +37,7 @@ namespace XDS.Features.MessagingHost.Feature
                     {
                         services.AddSingleton(fStoreConfig);
                         services.AddSingleton<IMessageNodeRepository, MessageNodeRepository>();
+                        services.AddSingleton<MessageRelayRecordRepository>();
                         services.AddTransient<CommandProcessor>();
                         services.AddSingleton<IRequestHandler, NoTLSRequestHandler>();
                         services.AddTransient<TcpAsyncServer>();

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using NBitcoin;
 using XDS.Features.MessagingInfrastructure.Addresses;
 using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.MessagingInfrastructure.PhotonServices;
 using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
 namespace XDS.Features.MessagingInfrastructure.Blockchain
 {

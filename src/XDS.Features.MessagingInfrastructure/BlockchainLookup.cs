@@ -20,7 +20,9 @@ using XDS.Features.MessagingInfrastructure.Addresses;
 using XDS.Features.MessagingInfrastructure.Balances;
 using XDS.Features.MessagingInfrastructure.Blockchain;
 using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.MessagingInfrastructure.PhotonServices;
 using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
 namespace XDS.Features.MessagingInfrastructure
 {
@@ -36,9 +38,11 @@ namespace XDS.Features.MessagingInfrastructure
         readonly IInitialBlockDownloadState initialBlockDownloadState;
         readonly Network network;
         readonly INodeLifetime nodeLifetime;
-       
+
         readonly ISignals signals;
         readonly IndexFileHelper indexFileHelper;
+
+        
 
         public bool IsStartingUp = true;
         private SubscriptionToken blockConnectedSubscription;
@@ -61,7 +65,7 @@ namespace XDS.Features.MessagingInfrastructure
             Tools.Extensions.Init(loggerFactory);
             this.addressIndex = indexFileHelper.LoadIndex();
             this.addressService = new AddressService(this.addressIndex, indexFileHelper, loggerFactory);
-           
+
 
             Task.Run(() =>
             {
@@ -105,6 +109,7 @@ namespace XDS.Features.MessagingInfrastructure
             long networkBalance = 0;
             foreach (string address in allAddresses)
             {
+                // occasionally, ab == null - when does that happen? Investigate!
                 IndexAddressBalance ab = IndexBalanceService.GetBalance(this.addressIndex.Entries, this.GetSyncedHeight(), address);
                 networkBalance += ab.Confirmed;
             }
@@ -369,6 +374,84 @@ namespace XDS.Features.MessagingInfrastructure
             this.ProcessBlockMS = this.stopwatchProcessBlock.ElapsedMilliseconds;
 
             SaveMetadata(height, hashBlock, force: false);
+        }
+
+        internal (long balance, int height, byte[] hashBlock, PhotonError photonError) GetBalanceFromIndex(string address, PhotonFlags photonFlags, out IndexAddressBalance balance)
+        {
+            balance = null;
+            var entry = this.addressService.FindAddressInIndex(address);
+
+            if (entry == null)
+                return (default, default, default, PhotonError.UnknownAddress);
+
+            if(this.IsStartingUp)
+                return (default, default, default, PhotonError.ServiceInitializing);
+
+            // todo: make this a transaction
+            var height = this.GetSyncedHeight();
+            var hash = this.GetSyncedHash();
+            balance = IndexBalanceService.GetBalance(this.addressIndex.Entries, height, address);
+
+            switch (photonFlags)
+            {
+                case PhotonFlags.Confirmed:
+                    return (balance.Confirmed, height, hash.Value, PhotonError.Success);
+                case PhotonFlags.Spendable:
+                    return (balance.Spendable, height, hash.Value, PhotonError.Success);
+                case PhotonFlags.Staking:
+                    return (balance.Stakable, height, hash.Value, PhotonError.Success);
+                default:
+                    return (default, default, default, PhotonError.InvalidArguments);
+            }
+           
+        }
+
+        internal (long balance, int height, byte[] hashBlock, IPhotonOutput[] outputs, PhotonError photonError) GetOutputsFromIndex(string address, PhotonFlags photonFlags)
+        {
+            var result = this.GetBalanceFromIndex(address, photonFlags, out var balance);
+           
+            if (result.photonError != PhotonError.Success)
+                return (default, default, default, default, result.photonError);
+
+           
+            IndexUtxo[] indexUtxos = null;
+
+            switch (photonFlags)
+            {
+                case PhotonFlags.Confirmed:
+                    // this is basically a history query
+                    bool includeSpent = photonFlags.HasFlag(PhotonFlags.IncludeSpentOutputs);
+                    return (default, default, default, default, PhotonError.NotImplemented);
+                case PhotonFlags.Spendable:
+                   indexUtxos = balance.SpendableCoins.Values.ToArray();
+                    break;
+                case PhotonFlags.Staking:
+                    indexUtxos = balance.StakingCoins.Values.ToArray();
+                    break;
+              
+                default:
+                    return (default, default, default,default, PhotonError.InvalidArguments);
+            }
+
+            IPhotonOutput[] outputs = new IPhotonOutput[indexUtxos.Length];
+            for (var i= 0; i<indexUtxos.Length; i++)
+            {
+                var utxo = indexUtxos[i];
+
+                outputs[i] = new PhotonOutput
+                {
+                    SpendingTx = utxo.SpendingTx?.Value,
+                    HashTx = utxo.HashTx.Value,
+                    SpendingHeight = utxo.SpendingHeight,
+                    SpendingN = utxo.SpendingN,
+                    BlockHeight = utxo.BlockHeight,
+                    Index = utxo.Index,
+                    Satoshis = utxo.Satoshis,
+                    UtxoType = utxo.UtxoType
+                };
+            }
+
+            return (result.balance, result.height, result.hashBlock, outputs, PhotonError.Success);
         }
     }
 }

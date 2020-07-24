@@ -34,7 +34,7 @@ namespace XDS.Features.MessagingHost.Storage
             this.statsWatch = new Stopwatch();
         }
 
-        public async Task<string> AddIdentity(XIdentity identity, Action<string, byte[]> initTlsUser)
+        public async Task<bool> TryAddIdentity(XIdentity identity, Action<string, byte[]> initTlsUser)
         {
             await SemaphoreSlim.WaitAsync();
             try
@@ -47,13 +47,15 @@ namespace XDS.Features.MessagingHost.Storage
                     throw new ArgumentNullException(nameof(XIdentity.PublicIdentityKey));
                 if (ChatId.GenerateChatId(identity.PublicIdentityKey) != identity.Id)
                     throw new Exception("Id and public key are unrelated.");
+
                 identity.ContactState = ContactState.Valid;
 
                 XIdentity existing = await this.identitiesRepository.Get(identity.Id);
                 if (existing == null)
                 {
                     await this.identitiesRepository.Add(identity);
-
+                    this.logger.LogInformation($"Identity {identity.Id} was published.", nameof(MessageNodeRepository));
+                    return true;
                 }
                 else
                 {
@@ -69,8 +71,7 @@ namespace XDS.Features.MessagingHost.Storage
                 if (initTlsUser != null) // TLS
                     initTlsUser(identity.Id, identity.PublicIdentityKey);
 
-                this.logger.LogInformation($"Identity {identity.Id} was published.", nameof(MessageNodeRepository));
-                return identity.Id;
+                return false;
             }
             finally
             {
@@ -78,22 +79,28 @@ namespace XDS.Features.MessagingHost.Storage
             }
         }
 
-        public async Task<string> AddMessage(XMessage message)
+        /// <summary>
+        /// Adds a Message and returns true, if the Message was successfully saved
+        /// and did not exists before. If the message already existed, it was a no-op and false is returned.
+        /// </summary>
+        public async Task<bool> TryAddMessage(XMessage message)
         {
-            if (message == null || message.Id == null)
-                return null;
-
             await SemaphoreSlim.WaitAsync();
             try
             {
                 var page = message.Id;  // message.Id is the RecipientId, which is the page (folder) where the message is stored
                 var filename = NetworkPayloadHash.ComputeAsGuidString(message.SerializedPayload); // be sure not to mutate the message - NetworkPayloadHash must stay the same at sender and recipient
                 message.Id = filename;  // FStore uses Id as filename
-                await this.messagesRepository.Add(message, page);
+                var existing = await this.messagesRepository.Get(filename, page);
+                if (existing == null)
+                {
+                    await this.messagesRepository.Add(message, page);
 
-                this.totalMessagesReceived++; // just stats
+                    this.totalMessagesReceived++; // just stats
+                    return true;
+                }
 
-                return $"{message.DynamicPublicKeyId};{message.DynamicPublicKeyId}";
+                return false;
             }
             finally
             {
@@ -101,19 +108,27 @@ namespace XDS.Features.MessagingHost.Storage
             }
         }
 
-        public async Task<string> AddResendRequest(XResendRequest resendRequest)
+        public async Task<bool> TryAddResendRequest(XResendRequest resendRequest)
         {
             await SemaphoreSlim.WaitAsync();
             try
             {
-                await this.resendRequestsRepository.Add(resendRequest);
-                return $"{resendRequest.Id}";
+                var existing = await this.resendRequestsRepository.Get(resendRequest.Id);
+                if (existing == null)
+                {
+                    await this.resendRequestsRepository.Add(resendRequest);
+                    return true;
+                }
+
+                return false;
             }
             finally
             {
                 SemaphoreSlim.Release();
             }
         }
+
+
 
         public async Task<byte> AnyNews(string recipientId)
         {
@@ -158,7 +173,7 @@ namespace XDS.Features.MessagingHost.Storage
                 // The message is still there, waiting to be downloaded.
                 // Querying client will keep SendMessageState.OnServer and keep checking.
                 if (message != null)
-                    return 1;   
+                    return 1;
 
                 return 2;       // There is no message but a ResendRequest fwas found. Yes, resend required. Client will resend and change state to SendMessageState.Resent. Will not check or resend any more.
 
@@ -190,24 +205,60 @@ namespace XDS.Features.MessagingHost.Storage
             await SemaphoreSlim.WaitAsync();
             try
             {
-                var messages = await this.messagesRepository.GetRange(0, 3, myId);
+                var maxBatchSize = 2;
+                List<XMessage> ret = new List<XMessage>(maxBatchSize);
 
-                foreach (var message in messages)
+                uint startIndex = 0;
+                var currentBatchSize = 0;
+                bool isRetrieving = true;
+
+                while (isRetrieving && currentBatchSize <= maxBatchSize)
                 {
-                    await this.messagesRepository.Delete(message.Id, myId);
-                    message.Id = myId; // reset Id to the same value with which is was uploaded, so that when the downloader calculates the NetworkPayloadHash its the original value.
+                    var messages = await this.messagesRepository.GetRange(startIndex, 1, myId);
+                    if (messages.Count == 0)
+                    {
+                        isRetrieving = false;
+                    }
+                    else
+                    {
+                        var message = messages[0];
+                        startIndex++; // process another message when we exited the loop.
+
+                        if (message.IsDownloaded) // do not deliver a message twice to the client
+                        {
+                            continue;
+                        }
+                        message.IsDownloaded = true; // remember is was downloaded
+                        await this.messagesRepository.Update(message, myId);
+                        message.Id = myId; // reset Id to the same value with which is was uploaded, so that when the downloader calculates the NetworkPayloadHash its the original value.
+                        ret.Add(message);
+                        currentBatchSize++;
+                    }
+
                 }
 
-                this.totalMessagesDelivered += messages.Count; // just stats
+                this.totalMessagesDelivered += ret.Count; // just stats
 
-                return messages.ToList(); // serializer expects a List<XMessage>
+                return ret;
             }
             finally
             {
                 SemaphoreSlim.Release();
             }
         }
-
+        public async Task<IReadOnlyList<XIdentity>> GetAllIdentities()
+        {
+            await SemaphoreSlim.WaitAsync();
+            try
+            {
+                var allIdentities = await this.identitiesRepository.GetAll();
+                return allIdentities;
+            }
+            finally
+            {
+                SemaphoreSlim.Release();
+            }
+        }
         public async Task<RepoStats> GetStatsAsync()
         {
             await SemaphoreSlim.WaitAsync();

@@ -2,6 +2,7 @@
 using NBitcoin;
 using XDS.Features.MessagingInfrastructure.Model;
 using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
 namespace XDS.Features.MessagingInfrastructure.Balances
 {

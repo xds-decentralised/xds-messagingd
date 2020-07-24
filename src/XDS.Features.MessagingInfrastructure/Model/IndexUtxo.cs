@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
 namespace XDS.Features.MessagingInfrastructure.Model
 {
+
+
     public class IndexUtxo : IEquatable<IndexUtxo>
     {
         public int BlockHeight { get; set; }

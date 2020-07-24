@@ -48,7 +48,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.SDK.Messaging.CrossTier
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.SDK.Cryptography", "src\submodules\xds-sdk\src\XDS.SDK.Cryptography\XDS.SDK.Cryptography.csproj", "{EAB265CF-5FAB-4EC3-9256-272A29B3BD75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XDS.Features.MessagingInfrastructure", "src\XDS.Features.MessagingInfrastructure\XDS.Features.MessagingInfrastructure.csproj", "{17473CED-005F-4B8B-B6D4-F9AAE4C14ACF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.Features.MessagingInfrastructure", "src\XDS.Features.MessagingInfrastructure\XDS.Features.MessagingInfrastructure.csproj", "{17473CED-005F-4B8B-B6D4-F9AAE4C14ACF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.Features.ItemForwarding", "src\XDS.Features.ItemForwarding\XDS.Features.ItemForwarding.csproj", "{0DF60A1F-1156-430F-85F9-7EED54640219}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -202,6 +204,14 @@ Global
 		{17473CED-005F-4B8B-B6D4-F9AAE4C14ACF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{17473CED-005F-4B8B-B6D4-F9AAE4C14ACF}.Release|x64.ActiveCfg = Release|Any CPU
 		{17473CED-005F-4B8B-B6D4-F9AAE4C14ACF}.Release|x64.Build.0 = Release|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Debug|x64.Build.0 = Debug|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Release|x64.ActiveCfg = Release|Any CPU
+		{0DF60A1F-1156-430F-85F9-7EED54640219}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

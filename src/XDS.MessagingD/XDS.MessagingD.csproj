@@ -19,6 +19,7 @@
     <ProjectReference Include="..\submodules\blockcore\src\Features\Blockcore.Features.RPC\Blockcore.Features.RPC.csproj" />
     <ProjectReference Include="..\submodules\blockcore\src\Features\Blockcore.Features.Wallet\Blockcore.Features.Wallet.csproj" />
     <ProjectReference Include="..\submodules\blockcore\src\Networks\Xds\Blockcore.Networks.Xds\Blockcore.Networks.Xds.csproj" />
+    <ProjectReference Include="..\XDS.Features.ItemForwarding\XDS.Features.ItemForwarding.csproj" />
     <ProjectReference Include="..\XDS.Features.MessagingHost\XDS.Features.MessagingHost.csproj" />
     <ProjectReference Include="..\XDS.Features.MessagingInfrastructure\XDS.Features.MessagingInfrastructure.csproj" />
   </ItemGroup>

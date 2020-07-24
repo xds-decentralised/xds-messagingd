@@ -11,10 +11,13 @@ namespace XDS.Features.MessagingHost.Storage
 	    Task<byte> CheckForResendRequest(XResendRequest resendRequestQuery);
 
 		Task<IReadOnlyList<XMessage>> GetMessages(string myId);
-        Task<string> AddIdentity(XIdentity identity, Action<string, byte[]> initTLSUser);
+        Task<bool> TryAddIdentity(XIdentity identity, Action<string, byte[]> initTLSUser);
         Task<XIdentity> GetIdentityAsync(string identityId);
-        Task<string> AddMessage(XMessage message);
-		Task<string> AddResendRequest(XResendRequest resendRequest);
+        Task<bool> TryAddMessage(XMessage message);
+		Task<bool> TryAddResendRequest(XResendRequest resendRequest);
+
+        Task<IReadOnlyList<XIdentity>> GetAllIdentities();
+
         Task<MessageNodeRepository.RepoStats> GetStatsAsync();
 
     }
