@@ -162,7 +162,7 @@ namespace XDS.Features.ItemForwarding.Client
                     catch (Exception e)
                     {
                         this.logger.LogError(
-                            $"Error while attempting to push {identities.Count} identities to peer {connectedInstance}: {e.Message}");
+                            $"Error while attempting to push {identities.Count} identities to peer {connectedInstance}: {e}");
                         await HandleFailedConnectedPeerAsync(e, connectedInstance);
                     }
                     finally
