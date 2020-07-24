@@ -25,7 +25,7 @@ namespace XDS.Features.ItemForwarding.Client
         readonly INodeLifetime nodeLifetime;
         readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
         readonly Random random = new Random();
-       
+
         readonly MessageRelayRecordRepository messageRelayRecords;
 
         ConcurrentDictionary<string, MessageRelayConnection> connections;
@@ -148,21 +148,29 @@ namespace XDS.Features.ItemForwarding.Client
                 this.logger.LogInformation(
                     $"Successfully created connected peer {createdInstance}, loading off to new thread.");
                 var identities = await this.GetAllIdentities();
-                try
+
+                foreach (var identity in identities)
                 {
-                    foreach (var identity in identities)
+                    var requestCommand =
+                        new RequestCommand(CommandId.PublishIdentity, identity).Serialize(CommandHeader.Yes);
+                    try
                     {
-                        var requestCommand =
-                            new RequestCommand(CommandId.PublishIdentity, identity).Serialize(CommandHeader.Yes);
+                        await this.semaphore.WaitAsync();
                         await connectedInstance.SendAsync(requestCommand);
                         var _ = await connectedInstance.ReceiveAsync();
                     }
+                    catch (Exception e)
+                    {
+                        this.logger.LogError(
+                            $"Error while attempting to push {identities.Count} identities to peer {connectedInstance}: {e.Message}");
+                    }
+                    finally
+                    {
+                        this.semaphore.Release();
+                    }
                 }
-                catch (Exception e)
-                {
-                    this.logger.LogError($"Error while attempting to push {identities.Count} identities to peer {connectedInstance}: {e.Message}");
-                }
-               
+
+
                 //await RunNetworkPeer(createdInstance);
             }
         }
@@ -171,7 +179,7 @@ namespace XDS.Features.ItemForwarding.Client
         {
             try
             {
-                connection.ConnectionState |=XDSPeerState.Connecting;
+                connection.ConnectionState |= XDSPeerState.Connecting;
                 await connection.ConnectAsync();
                 connection.ConnectionState &= ~XDSPeerState.Connecting;
                 connection.ConnectionState |= XDSPeerState.Connected;
@@ -187,7 +195,7 @@ namespace XDS.Features.ItemForwarding.Client
 
         async Task HandleFailedConnectedPeerAsync(Exception e, MessageRelayConnection connection)
         {
-            if(connection == null)  // there was no connection available
+            if (connection == null)  // there was no connection available
                 return;
 
             Debug.Assert(connection.ConnectionState.HasFlag(XDSPeerState.Failed));
@@ -292,7 +300,7 @@ namespace XDS.Features.ItemForwarding.Client
 
         public MessageRelayConnection[] GetAllActiveConnections()
         {
-            return this.connections.Values.Where(x=>x.ConnectionState.HasFlag(XDSPeerState.Connected)).ToArray();
+            return this.connections.Values.Where(x => x.ConnectionState.HasFlag(XDSPeerState.Connected)).ToArray();
         }
 
         public async void ReceiveMessageRelayRecordAsync(IPAddress ipAddress, int port, XDSPeerServices peerServices, string userAgent)
