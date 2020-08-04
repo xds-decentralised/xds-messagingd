@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using XDS.Features.MessagingInfrastructure.Addresses;
+using XDS.Features.Photon.Addresses;
 
-namespace XDS.Features.MessagingInfrastructure
+namespace XDS.Features.Photon
 {
     class Constants
     {

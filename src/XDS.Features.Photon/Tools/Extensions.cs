@@ -5,12 +5,12 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using XDS.Features.MessagingInfrastructure.Feature;
-using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.Photon.Feature;
+using XDS.Features.Photon.Model;
 using XDS.SDK.Cryptography;
 using XDS.SDK.Cryptography.Api.Infrastructure;
 
-namespace XDS.Features.MessagingInfrastructure.Tools
+namespace XDS.Features.Photon.Tools
 {
     public static class Extensions
     {
@@ -74,7 +74,7 @@ namespace XDS.Features.MessagingInfrastructure.Tools
                 var display = bytes == null ? "null" : bytes.ToHexString();
                 var message =
                     $"Suspicious byte array '{display}', it does not look like a cryptographic key or hash, please investigate. Expected lenght was {expectedLength}.";
-                throw new X1RunnerException(HttpStatusCode.BadRequest, message);
+                throw new PhotonException(HttpStatusCode.BadRequest, message);
             }
         }
 

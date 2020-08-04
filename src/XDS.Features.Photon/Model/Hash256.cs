@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using XDS.SDK.Cryptography;
 
-namespace XDS.Features.MessagingInfrastructure.Model
+namespace XDS.Features.Photon.Model
 {
     public class Hash256 : IEquatable<Hash256>
     {

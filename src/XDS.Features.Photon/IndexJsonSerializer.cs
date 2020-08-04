@@ -5,13 +5,13 @@ using System.Text;
 using NBitcoin;
 using Utf8Json;
 using Utf8Json.Resolvers;
-using XDS.Features.MessagingInfrastructure.Addresses;
-using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.Photon.Addresses;
+using XDS.Features.Photon.Model;
 using XDS.SDK.Cryptography;
 
-namespace XDS.Features.MessagingInfrastructure
+namespace XDS.Features.Photon
 {
-    public sealed class X1WalletFileJsonSerializer : IJsonSerializer
+    public sealed class IndexJsonSerializer : IJsonSerializer
     {
         public T Deserialize<T>(byte[] serialized)
         {

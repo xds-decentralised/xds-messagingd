@@ -10,7 +10,6 @@
     <ProjectReference Include="..\submodules\blockcore\src\Features\Blockcore.Features.MemoryPool\Blockcore.Features.MemoryPool.csproj" />
     <ProjectReference Include="..\submodules\xds-sdk\src\XDS.SDK.Messaging.CrossTierTypes\XDS.SDK.Messaging.CrossTierTypes.csproj" />
     <ProjectReference Include="..\XDS.Features.ItemForwarding\XDS.Features.ItemForwarding.csproj" />
-    <ProjectReference Include="..\XDS.Features.MessagingInfrastructure\XDS.Features.MessagingInfrastructure.csproj" />
   </ItemGroup>
 
 </Project>

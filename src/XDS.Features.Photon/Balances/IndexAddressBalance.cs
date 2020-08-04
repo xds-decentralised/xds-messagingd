@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.Serialization;
-using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.Photon.Model;
 
-namespace XDS.Features.MessagingInfrastructure.Balances
+namespace XDS.Features.Photon.Balances
 {
     public sealed class IndexAddressBalance
     {

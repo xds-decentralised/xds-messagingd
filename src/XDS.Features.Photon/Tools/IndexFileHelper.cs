@@ -4,11 +4,10 @@ using System.IO;
 using Blockcore.Configuration;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using XDS.Features.MessagingInfrastructure.Addresses;
-using XDS.Features.MessagingInfrastructure.Blockchain;
-using XDS.Features.MessagingInfrastructure.Model;
+using XDS.Features.Photon.Addresses;
+using XDS.Features.Photon.Model;
 
-namespace XDS.Features.MessagingInfrastructure.Tools
+namespace XDS.Features.Photon.Tools
 {
     public sealed class IndexFileHelper
     {
@@ -33,7 +32,7 @@ namespace XDS.Features.MessagingInfrastructure.Tools
             this.network = network;
         }
 
-        public XDSAddressIndex LoadIndex()
+        public AddressIndex LoadIndex()
         {
             if (!File.Exists(this.addressIndexFilePath))
             {
@@ -45,7 +44,7 @@ namespace XDS.Features.MessagingInfrastructure.Tools
             try
             {
                 byte[] file = File.ReadAllBytes(this.addressIndexFilePath);
-                var addressIndex = this.jsonSerializer.Deserialize<XDSAddressIndex>(file);
+                var addressIndex = this.jsonSerializer.Deserialize<AddressIndex>(file);
 
                 return addressIndex;
             }
@@ -58,7 +57,7 @@ namespace XDS.Features.MessagingInfrastructure.Tools
 
         }
 
-        public void SaveIndex(XDSAddressIndex xdsAddressIndex, bool force)
+        public void SaveIndex(AddressIndex addressIndex, bool force)
         {
             if (DateTime.Now - this.lastSaved < TimeSpan.FromSeconds(60) && force == false)
                 return;
@@ -67,18 +66,18 @@ namespace XDS.Features.MessagingInfrastructure.Tools
 
             this.stopWatchSaving.Restart();
 
-            var serialized = this.jsonSerializer.Serialize(xdsAddressIndex);
+            var serialized = this.jsonSerializer.Serialize(addressIndex);
             File.WriteAllBytes(this.addressIndexFilePath, serialized);
 
-            this.logger.LogInformation($"Saved indexe at height {xdsAddressIndex.SyncedHeight} - {serialized.Length} bytes, {this.stopWatchSaving.ElapsedMilliseconds} ms.");
+            this.logger.LogInformation($"Saved indexe at height {addressIndex.SyncedHeight} - {serialized.Length} bytes, {this.stopWatchSaving.ElapsedMilliseconds} ms.");
         }
 
-        XDSAddressIndex CreateIndex()
+        AddressIndex CreateIndex()
         {
             var now = DateTimeOffset.UtcNow;
             var identifier = Guid.NewGuid().ToString();
 
-            var addressIndex = new XDSAddressIndex
+            var addressIndex = new AddressIndex
             {
                 Version = 1,
                 IndexIdentifier = identifier,

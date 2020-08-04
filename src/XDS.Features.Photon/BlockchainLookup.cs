@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Blockcore.Configuration;
-using Blockcore.Consensus;
 using Blockcore.EventBus;
 using Blockcore.EventBus.CoreEvents;
 using Blockcore.Interfaces;
@@ -16,39 +11,41 @@ using Blockcore.Signals;
 using Blockcore.Utilities;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using XDS.Features.MessagingInfrastructure.Addresses;
-using XDS.Features.MessagingInfrastructure.Balances;
-using XDS.Features.MessagingInfrastructure.Blockchain;
-using XDS.Features.MessagingInfrastructure.Model;
-using XDS.Features.MessagingInfrastructure.PhotonServices;
-using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.Features.Photon.Addresses;
+using XDS.Features.Photon.Balances;
+using XDS.Features.Photon.Blockchain;
+using XDS.Features.Photon.Model;
+using XDS.Features.Photon.Tools;
 using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
-namespace XDS.Features.MessagingInfrastructure
+namespace XDS.Features.Photon
 {
     public class BlockchainLookup
     {
-        readonly SemaphoreSlim WalletSemaphore = new SemaphoreSlim(1, 1);
+        readonly object readWriteLock = new object();
+
+        readonly Stopwatch stopwatchProcessBlock = new Stopwatch();
+        readonly Stopwatch stopWatchBalanceQuery = new Stopwatch();
+
         readonly ILogger logger;
-        readonly ChainIndexer chainIndexer;
         readonly IBlockStore blockStore;
-
-        readonly XDSAddressIndex addressIndex;
-        readonly AddressService addressService;
-        readonly IInitialBlockDownloadState initialBlockDownloadState;
-        readonly Network network;
         readonly INodeLifetime nodeLifetime;
-
         readonly ISignals signals;
+
+        readonly ChainIndexer chainIndexer;
+        readonly AddressIndex addressIndex;
+        readonly AddressService addressService;
+        readonly Network network;
         readonly IndexFileHelper indexFileHelper;
 
-        
-
-        public bool IsStartingUp = true;
-        private SubscriptionToken blockConnectedSubscription;
 
 
-        public BlockchainLookup(ILoggerFactory loggerFactory, ChainIndexer chainIndexer, IBlockStore blockStore, ISignals signals, IndexFileHelper indexFileHelper, IInitialBlockDownloadState initialBlockDownloadState, Network network, INodeLifetime nodeLifetime, NodeSettings nodeSettings)
+        bool isStartingUp = true;
+        long lastProcessBlockMs;
+        SubscriptionToken blockConnectedSubscription;
+
+
+        public BlockchainLookup(ILoggerFactory loggerFactory, ChainIndexer chainIndexer, IBlockStore blockStore, ISignals signals, IndexFileHelper indexFileHelper, Network network, INodeLifetime nodeLifetime)
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.chainIndexer = chainIndexer;
@@ -56,7 +53,6 @@ namespace XDS.Features.MessagingInfrastructure
             this.nodeLifetime = nodeLifetime;
             this.signals = signals;
             this.network = network;
-            this.initialBlockDownloadState = initialBlockDownloadState;
 
             this.indexFileHelper = indexFileHelper;
             AddressHelper.Init(network, loggerFactory);
@@ -65,42 +61,17 @@ namespace XDS.Features.MessagingInfrastructure
             Tools.Extensions.Init(loggerFactory);
             this.addressIndex = indexFileHelper.LoadIndex();
             this.addressService = new AddressService(this.addressIndex, indexFileHelper, loggerFactory);
-
-
-            Task.Run(() =>
-            {
-                Task.Delay(5000).Wait();
-                while (IsIBD())
-                {
-                    Task.Delay(2000).Wait();
-                }
-
-                while (this.chainIndexer.Tip == null || this.chainIndexer.Tip.HashBlock == null)
-                {
-                    Task.Delay(2000).Wait();
-                }
-                SyncWallet();
-            });
         }
+
+
+      
 
         public int GetAddressCount()
         {
             return this.addressIndex.Entries.Count;
         }
 
-        bool IsIBD()
-        {
-            try
-            {
-                return this.initialBlockDownloadState.IsInitialBlockDownload();
-            }
-            catch (Exception e)
-            {
-                this.logger.LogWarning(
-                    $"Error in {nameof(this.initialBlockDownloadState.IsInitialBlockDownload)}: {e.Message}");
-                return true;
-            }
-        }
+
 
         public long GetNetworkBalance()
         {
@@ -110,7 +81,7 @@ namespace XDS.Features.MessagingInfrastructure
             foreach (string address in allAddresses)
             {
                 // occasionally, ab == null - when does that happen? Investigate!
-                IndexAddressBalance ab = IndexBalanceService.GetBalance(this.addressIndex.Entries, this.GetSyncedHeight(), address);
+                IndexAddressBalance ab = IndexBalanceService.GetBalance(this.addressIndex.Entries, GetSyncedHeightAndHash().height, address);
                 networkBalance += ab.Confirmed;
             }
 
@@ -149,6 +120,7 @@ namespace XDS.Features.MessagingInfrastructure
 
             return isOnBestChain;
         }
+
         /// <summary>
         /// Clears and initializes the wallet Metadata file, and sets heights to 0 and the hashes to null,
         /// and saves the Metadata file, effectively updating it to the latest version.
@@ -177,13 +149,15 @@ namespace XDS.Features.MessagingInfrastructure
             if (checkpointHeader != null && this.chainIndexer.Tip.Height - checkpointHeader.Height > this.network.Consensus.MaxReorgLength)  // also check the checkpoint is not newer than it should be
             {
                 // we have a valid checkpoint, remove all later blocks
-                RemoveBlocks(checkpointHeader);
+                this.logger.LogWarning($"Rewinding {this.chainIndexer.Tip.Height - checkpointHeader.Height} blocks to checkpoint at height: {checkpointHeader.Height}");
+                if (RemoveBlocks(checkpointHeader))
+                    return;
+
             }
-            else
-            {
-                // we do not have a usable checkpoint, sync from start by resetting everything
-                ResetMetadata();
-            }
+
+            // we do not have a usable checkpoint, sync from start by resetting everything
+            this.logger.LogError($"Rewinding to block 0, checkpoint {this.addressIndex.CheckpointHeight}-{this.addressIndex.CheckpointHash} will not be used.");
+            ResetMetadata();
         }
 
         /// <summary>
@@ -192,50 +166,59 @@ namespace XDS.Features.MessagingInfrastructure
         /// This method removes all block and the transactions in them of later blocks.
         /// </summary>
         /// <param name="checkpointHeader">ChainedHeader of the checkpoint</param>
-        void RemoveBlocks(ChainedHeader checkpointHeader)
+        bool RemoveBlocks(ChainedHeader checkpointHeader)
         {
-            var entries = this.addressIndex.Entries.ToList();
-            for (var i = 0; i < entries.Count; i++)
+            try
             {
-                var entry = entries[i];
-                List<IndexUtxo> deleteReceived = new List<IndexUtxo>();
-                foreach (var utxo in entry.Received)
+                var entries = this.addressIndex.Entries.ToList();
+                for (var i = 0; i < entries.Count; i++)
                 {
-                    if (utxo.BlockHeight > checkpointHeader.Height)
-                        deleteReceived.Add(utxo);
-                    else
+                    var entry = entries[i];
+                    List<IndexUtxo> deleteReceived = new List<IndexUtxo>();
+                    foreach (var utxo in entry.Received)
                     {
-                        if (utxo.SpendingHeight > checkpointHeader.Height)
+                        if (utxo.BlockHeight > checkpointHeader.Height)
+                            deleteReceived.Add(utxo);
+                        else
                         {
-                            utxo.SpendingTx = null;
-                            utxo.SpendingHeight = 0;
-                            utxo.SpendingN = 0;
+                            if (utxo.SpendingHeight > checkpointHeader.Height)
+                            {
+                                utxo.SpendingTx = null;
+                                utxo.SpendingHeight = 0;
+                                utxo.SpendingN = 0;
+                            }
                         }
                     }
+
+                    foreach (var utxo in deleteReceived)
+                    {
+                        entry.Received.Remove(utxo);
+                    }
+
+                    if (entry.Received.Count == 0)
+                        this.addressIndex.Entries.Remove(entry);
                 }
 
-                foreach (var utxo in deleteReceived)
-                {
-                    entry.Received.Remove(utxo);
-                }
 
-                if (entry.Received.Count == 0)
-                    this.addressIndex.Entries.Remove(entry);
+
+                // Update last block synced height
+                this.addressIndex.SyncedHeight = checkpointHeader.Height;
+                this.addressIndex.SyncedHash = checkpointHeader.HashBlock.ToHash256();
+
+                // force-saving is important here, it will also move the checkpoint backwards
+                SaveMetadata(this.addressIndex.SyncedHeight, this.addressIndex.SyncedHash, force: true);
+                return true;
             }
-
-
-
-            // Update last block synced height
-            this.addressIndex.SyncedHeight = checkpointHeader.Height;
-            this.addressIndex.SyncedHash = checkpointHeader.HashBlock.ToHash256();
-            this.addressIndex.CheckpointHeight = checkpointHeader.Height;
-            this.addressIndex.CheckpointHash = checkpointHeader.HashBlock.ToHash256();
-            SaveMetadata(this.addressIndex.SyncedHeight, this.addressIndex.SyncedHash, force: true);
+            catch (Exception e)
+            {
+                this.logger.LogError($"{nameof(RemoveBlocks)} failed: {e}");
+                return false;
+            }
         }
 
         void CompleteStart()
         {
-            this.IsStartingUp = false;
+            this.isStartingUp = false;
             this.logger.LogInformation($"Startup sync completed at height {this.addressIndex.SyncedHeight}, forcing a save.");
             SaveMetadata(this.addressIndex.SyncedHeight, this.addressIndex.SyncedHash, true);
             SubscribeSignals();
@@ -254,42 +237,37 @@ namespace XDS.Features.MessagingInfrastructure
 
         void OnBlockConnected(BlockConnected blockConnected)
         {
-            if (blockConnected.ConnectedBlock.ChainedHeader.Height <= GetSyncedHeight())
+            if (blockConnected.ConnectedBlock.ChainedHeader.Height <= GetSyncedHeightAndHash().height)
             {
-                this.logger.LogWarning($"OnBlockConnected is passing block of height {blockConnected.ConnectedBlock.ChainedHeader.Height}, but the index is already at height {GetSyncedHeight()}. Skipping block!");
+                this.logger.LogWarning($"OnBlockConnected is passing block of height {blockConnected.ConnectedBlock.ChainedHeader.Height}, but the index is already at height {GetSyncedHeightAndHash()}. Skipping block!");
                 return;
             }
 
-            SyncWallet();
+            Sync();
         }
 
-        public int GetSyncedHeight()
+        public (int height, Hash256 hash) GetSyncedHeightAndHash()
         {
-            return this.addressIndex.SyncedHeight;
+            return (this.addressIndex.SyncedHeight, this.addressIndex.SyncedHash);
         }
-
-        protected Hash256 GetSyncedHash()
-        {
-            return this.addressIndex.SyncedHash;
-        }
-
-
 
 
         void SaveMetadata(int height, Hash256 hashBlock, bool force)
         {
             UpdateLastBlockSyncedAndCheckpoint(height, hashBlock);
+
             this.indexFileHelper.SaveIndex(this.addressIndex, force);
 
-            void UpdateLastBlockSyncedAndCheckpoint(int height, Hash256 hashBlock)
+            void UpdateLastBlockSyncedAndCheckpoint(int currentHeight, Hash256 currentBlockHash)
             {
-                this.addressIndex.SyncedHeight = height;
-                this.addressIndex.SyncedHash = hashBlock;
+                this.addressIndex.SyncedHeight = currentHeight;
+                this.addressIndex.SyncedHash = currentBlockHash;
 
-                const int minCheckpointHeight = 125;
-                if (height > minCheckpointHeight)
+                int minCheckpointHeight = (int)this.network.Consensus.MaxReorgLength + 1;
+
+                if (currentHeight > minCheckpointHeight)
                 {
-                    var checkPoint = this.chainIndexer.GetHeader(height - minCheckpointHeight);
+                    var checkPoint = this.chainIndexer.GetHeader(currentHeight - minCheckpointHeight);
                     this.addressIndex.CheckpointHash = checkPoint.HashBlock.ToHash256();
                     this.addressIndex.CheckpointHeight = checkPoint.Height;
                 }
@@ -301,9 +279,10 @@ namespace XDS.Features.MessagingInfrastructure
             }
         }
 
-        protected void SyncWallet()
+        public void Sync()
         {
-            this.logger.LogInformation($"Wallet is syncing {(this.IsStartingUp ? "(startup)." : "(updating).")}");
+            this.logger.LogInformation($"Syncing {(this.isStartingUp ? "(startup)." : "(updating).")}");
+
             try
             {
                 // a) check if the wallet is on the right chain
@@ -332,46 +311,41 @@ namespace XDS.Features.MessagingInfrastructure
 
                     }
 
-                    lock (this.lockObj)
+                    lock (this.readWriteLock)
                     {
                         ProcessBlock(nextBlock, nextBlockHeader.Height, nextBlock.GetHash256());
-                        //var networkBalance = GetNetworkBalance();
-                        //var expectedBalance = nextBlockHeader.Height * 50;
-                        //if (networkBalance != expectedBalance)
-                        //    ;
                     }
 
                 }
             }
             catch (Exception e)
             {
-                this.logger.LogError($"{nameof(SyncWallet)}: {e.Message}");
+                this.logger.LogError($"{nameof(Sync)}: {e.Message}");
             }
 
-            if (this.IsStartingUp)
+            if (this.isStartingUp)
                 CompleteStart();
         }
 
-        public object lockObj = new object();
+       
 
-        public long ProcessBlockMS { get; private set; }
-        Stopwatch stopwatchProcessBlock = new Stopwatch();
+      
 
         void ProcessBlock(Block block, int height, Hash256 hashBlock)
         {
             if (this.addressIndex.SyncedHeight != height - 1 || this.addressIndex.SyncedHash == hashBlock)
             {
-                this.IsStartingUp = true;
+                this.isStartingUp = true;
                 UnSubscribeSignals();
                 MoveToBestChain();
-                SyncWallet();
+                Sync();
             }
 
             this.stopwatchProcessBlock.Restart();
 
             BlockService.AnalyzeBlock(block, height, this.addressService.GetOrCreateAddressInIndex, this.addressService.FindUtxo);
 
-            this.ProcessBlockMS = this.stopwatchProcessBlock.ElapsedMilliseconds;
+            this.lastProcessBlockMs = this.stopwatchProcessBlock.ElapsedMilliseconds;
 
             SaveMetadata(height, hashBlock, force: false);
         }
@@ -384,12 +358,11 @@ namespace XDS.Features.MessagingInfrastructure
             if (entry == null)
                 return (default, default, default, PhotonError.UnknownAddress);
 
-            if(this.IsStartingUp)
+            if (this.isStartingUp)
                 return (default, default, default, PhotonError.ServiceInitializing);
 
-            // todo: make this a transaction
-            var height = this.GetSyncedHeight();
-            var hash = this.GetSyncedHash();
+            (int height, Hash256 hash) = GetSyncedHeightAndHash();
+
             balance = IndexBalanceService.GetBalance(this.addressIndex.Entries, height, address);
 
             switch (photonFlags)
@@ -403,18 +376,18 @@ namespace XDS.Features.MessagingInfrastructure
                 default:
                     return (default, default, default, PhotonError.InvalidArguments);
             }
-           
+
         }
 
         internal (long balance, int height, byte[] hashBlock, IPhotonOutput[] outputs, PhotonError photonError) GetOutputsFromIndex(string address, PhotonFlags photonFlags)
         {
             var result = this.GetBalanceFromIndex(address, photonFlags, out var balance);
-           
+
             if (result.photonError != PhotonError.Success)
                 return (default, default, default, default, result.photonError);
 
-           
-            IndexUtxo[] indexUtxos = null;
+
+            IndexUtxo[] indexUtxos;
 
             switch (photonFlags)
             {
@@ -423,18 +396,18 @@ namespace XDS.Features.MessagingInfrastructure
                     bool includeSpent = photonFlags.HasFlag(PhotonFlags.IncludeSpentOutputs);
                     return (default, default, default, default, PhotonError.NotImplemented);
                 case PhotonFlags.Spendable:
-                   indexUtxos = balance.SpendableCoins.Values.ToArray();
+                    indexUtxos = balance.SpendableCoins.Values.ToArray();
                     break;
                 case PhotonFlags.Staking:
                     indexUtxos = balance.StakingCoins.Values.ToArray();
                     break;
-              
+
                 default:
-                    return (default, default, default,default, PhotonError.InvalidArguments);
+                    return (default, default, default, default, PhotonError.InvalidArguments);
             }
 
             IPhotonOutput[] outputs = new IPhotonOutput[indexUtxos.Length];
-            for (var i= 0; i<indexUtxos.Length; i++)
+            for (var i = 0; i < indexUtxos.Length; i++)
             {
                 var utxo = indexUtxos[i];
 
@@ -452,6 +425,33 @@ namespace XDS.Features.MessagingInfrastructure
             }
 
             return (result.balance, result.height, result.hashBlock, outputs, PhotonError.Success);
+        }
+
+        public void AddComponentStatsAsync(StringBuilder log)
+        {
+            try
+            {
+                lock (this.readWriteLock)
+                {
+                    log.AppendLine();
+                    log.AppendLine($"======= XDS Blockchain lookup  =======");
+                    log.AppendLine($"Synced Height: {GetSyncedHeightAndHash().height}");
+                    log.AppendLine($"Addresses: {GetAddressCount()}");
+                    log.AppendLine($"Process Block Cost: {this.lastProcessBlockMs} ms");
+
+                    if (!this.isStartingUp)
+                    {
+                        this.stopWatchBalanceQuery.Restart();
+                        log.AppendLine($"Network Balance: {GetNetworkBalance()}");
+                        log.AppendLine($"Money Supply: {GetSyncedHeightAndHash().height * 50}");
+                        log.AppendLine($"Balance Query Cost: {this.stopWatchBalanceQuery.ElapsedMilliseconds} ms");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError(e.Message);
+            }
         }
     }
 }

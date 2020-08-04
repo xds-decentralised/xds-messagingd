@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
-namespace XDS.Features.MessagingInfrastructure.Model
+namespace XDS.Features.Photon.Model
 {
 
 

@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
-using XDS.Features.MessagingInfrastructure.Feature;
-using XDS.Features.MessagingInfrastructure.Tools;
-using Extensions = XDS.Features.MessagingInfrastructure.Tools.Extensions;
+using XDS.Features.Photon.Feature;
+using Extensions = XDS.Features.Photon.Tools.Extensions;
 
-namespace XDS.Features.MessagingInfrastructure.Addresses
+namespace XDS.Features.Photon.Addresses
 {
     public static class AddressHelper
     {
@@ -27,8 +25,6 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
             PubKeyAddressPrefix = Encoding.ASCII.GetString(network.Bech32Encoders[(int)Bech32Type.WITNESS_PUBKEY_ADDRESS].HumanReadablePart) + "1";
             ScriptAddressPrefix = Encoding.ASCII.GetString(network.Bech32Encoders[(int)Bech32Type.WITNESS_SCRIPT_ADDRESS].HumanReadablePart) + "1";
         }
-
-
 
         public static Script GetScriptPubKey(this string bech32Address)
         {
@@ -154,16 +150,16 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
 
 
 
-        static X1RunnerException InvalidAddress(string input, Exception innerException = null)
+        static PhotonException InvalidAddress(string input, Exception innerException = null)
         {
             var message = $"Invalid address '{input ?? "null"}'.";
-            return new X1RunnerException(System.Net.HttpStatusCode.BadRequest, message, innerException);
+            return new PhotonException(System.Net.HttpStatusCode.BadRequest, message, innerException);
         }
 
-        static X1RunnerException InvalidScriptPubKey(Script input, Exception innerException = null)
+        static PhotonException InvalidScriptPubKey(Script input, Exception innerException = null)
         {
             var message = $"Invalid ScriptPubKey '{input?.ToString() ?? "null"}'.";
-            return new X1RunnerException(System.Net.HttpStatusCode.BadRequest, message, innerException);
+            return new PhotonException(System.Net.HttpStatusCode.BadRequest, message, innerException);
         }
 
     }

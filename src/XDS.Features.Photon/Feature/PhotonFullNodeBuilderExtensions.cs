@@ -1,34 +1,33 @@
-﻿using System.IO;
-using Blockcore.Builder;
+﻿using Blockcore.Builder;
 using Blockcore.Configuration.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using XDS.Features.MessagingInfrastructure.Addresses;
-using XDS.Features.MessagingInfrastructure.PhotonServices;
-using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.Features.Photon.Addresses;
+using XDS.Features.Photon.PhotonServices;
+using XDS.Features.Photon.Tools;
 using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
-namespace XDS.Features.MessagingInfrastructure.Feature
+namespace XDS.Features.Photon.Feature
 {
     /// <summary>
     /// A class providing extension methods for <see cref="IFullNodeBuilder"/>.
     /// </summary>
-    public static class MessagingInfrastructureFullNodeBuilderExtensions
+    public static class PhotonFullNodeBuilderExtensions
     {
-        public static IFullNodeBuilder UseMessagingInfrastructure(this IFullNodeBuilder fullNodeBuilder)
+        public static IFullNodeBuilder UsePhoton(this IFullNodeBuilder fullNodeBuilder)
         {
-            LoggingConfiguration.RegisterFeatureNamespace<MessagingInfrastructureFeature>(nameof(MessagingInfrastructureFeature));
+            LoggingConfiguration.RegisterFeatureNamespace<PhotonFeature>(nameof(PhotonFeature));
            
             
 
             fullNodeBuilder.ConfigureFeature(features =>
             {
                 features
-                    .AddFeature<MessagingInfrastructureFeature>()
+                    .AddFeature<PhotonFeature>()
                     .FeatureServices(services =>
                     {
                         services.AddSingleton<BlockchainLookup>();
                         services.AddSingleton<IndexFileHelper>();
-                        services.AddSingleton<IJsonSerializer, X1WalletFileJsonSerializer>();
+                        services.AddSingleton<IJsonSerializer, IndexJsonSerializer>();
                         services.AddSingleton<IPhotonService, DefaultPhotonService>();
                     });
             });

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace XDS.Features.MessagingInfrastructure.Model
+namespace XDS.Features.Photon.Model
 {
     public class IndexEntry : IEquatable<IndexEntry>
     {

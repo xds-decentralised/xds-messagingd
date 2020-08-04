@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 
-namespace XDS.Features.MessagingInfrastructure.Model
+namespace XDS.Features.Photon.Model
 {
-    public class XDSAddressIndex
+    public class AddressIndex
     {
-        public XDSAddressIndex()
+        public AddressIndex()
         {
             this.Entries = new HashSet<IndexEntry>();
         }
@@ -16,7 +16,7 @@ namespace XDS.Features.MessagingInfrastructure.Model
         public long ModifiedUtc { get; set; }
 
         /// <summary>
-        /// The IndexIdentifier correlates the XDSAddressIndex and the XDSBlockIndex.
+        /// The IndexIdentifier correlates the AddressIndex and the XDSBlockIndex.
         /// </summary>
         public string IndexIdentifier { get; set; }
 

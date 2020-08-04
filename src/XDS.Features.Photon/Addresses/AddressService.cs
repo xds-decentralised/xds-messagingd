@@ -1,25 +1,25 @@
 ﻿using Microsoft.Extensions.Logging;
-using XDS.Features.MessagingInfrastructure.Model;
-using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.Features.Photon.Model;
+using XDS.Features.Photon.Tools;
 
-namespace XDS.Features.MessagingInfrastructure.Addresses
+namespace XDS.Features.Photon.Addresses
 {
     sealed class AddressService
     {
-        readonly XDSAddressIndex xdsAddressIndex;
+        readonly AddressIndex addressIndex;
         readonly IndexFileHelper indexFileHelper;
         readonly ILogger logger;
 
-        public AddressService(XDSAddressIndex xdsAddressIndex, IndexFileHelper indexFileHelper, ILoggerFactory loggerFactory)
+        public AddressService(AddressIndex addressIndex, IndexFileHelper indexFileHelper, ILoggerFactory loggerFactory)
         {
-            this.xdsAddressIndex = xdsAddressIndex;
+            this.addressIndex = addressIndex;
             this.indexFileHelper = indexFileHelper;
             this.logger = loggerFactory.CreateLogger<AddressService>();
         }
 
         public IndexUtxo FindUtxo(Hash256 txId, int n)
         {
-            var entries = this.xdsAddressIndex.Entries;
+            var entries = this.addressIndex.Entries;
             foreach (var entry in entries)
             {
                 foreach (var utxo in entry.Received)
@@ -39,7 +39,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
                 Address = bech32
             };
 
-            this.xdsAddressIndex.Entries.TryGetValue(equalValue, out IndexEntry address);
+            this.addressIndex.Entries.TryGetValue(equalValue, out IndexEntry address);
 
             return address;
         }
@@ -71,7 +71,7 @@ namespace XDS.Features.MessagingInfrastructure.Addresses
                         LastSeenHeight = blockHeight
                     };
                 }
-                this.xdsAddressIndex.Entries.Add(address);
+                this.addressIndex.Entries.Add(address);
             }
 
             return address;

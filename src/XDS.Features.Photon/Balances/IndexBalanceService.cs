@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using NBitcoin;
-using XDS.Features.MessagingInfrastructure.Model;
-using XDS.Features.MessagingInfrastructure.Tools;
+using XDS.Features.Photon.Model;
+using XDS.Features.Photon.Tools;
 using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
-namespace XDS.Features.MessagingInfrastructure.Balances
+namespace XDS.Features.Photon.Balances
 {
     static class IndexBalanceService
     {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using XDS.SDK.Messaging.CrossTierTypes.Photon;
 
-namespace XDS.Features.MessagingInfrastructure.PhotonServices
+namespace XDS.Features.Photon.PhotonServices
 {
     public class DefaultPhotonService : IPhotonService
     {

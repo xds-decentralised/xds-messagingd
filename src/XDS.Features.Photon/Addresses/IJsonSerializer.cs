@@ -1,5 +1,5 @@
 ﻿
-namespace XDS.Features.MessagingInfrastructure.Addresses
+namespace XDS.Features.Photon.Addresses
 {
     public interface IJsonSerializer
     {
