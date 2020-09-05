@@ -12,7 +12,7 @@ namespace XDS.Features.Photon.Feature
         readonly IFullNode fullNode;
         readonly IInitialBlockDownloadState initialBlockDownloadState;
         readonly BlockchainLookup blockchainLookup;
-       
+
 
         public PhotonFeature(IFullNode fullNode, IInitialBlockDownloadState initialBlockDownloadState, INodeStats nodeStats, BlockchainLookup blockchainLookup)
         {
@@ -24,15 +24,22 @@ namespace XDS.Features.Photon.Feature
             nodeStats.RegisterStats(sb => { }, StatsType.Inline, GetType().Name, 800);
         }
 
-        public override async Task InitializeAsync()
+        public override Task InitializeAsync()
         {
-            while (this.fullNode.State != FullNodeState.Started)
-                await Task.Delay(100);
+            // To implement a delayed init with Task.Delay, we need to wait on another thread, 
+            // otherwise we'll block the whole node startup here.
+            _ = Task.Run(async () =>
+              {
+                  while (this.fullNode.State != FullNodeState.Started)
+                      await Task.Delay(100);
 
-            while (this.initialBlockDownloadState.IsInitialBlockDownload())
-                Task.Delay(1000).Wait();
+                  while (this.initialBlockDownloadState.IsInitialBlockDownload())
+                      Task.Delay(1000).Wait();
 
-            this.blockchainLookup.Sync();
+                  this.blockchainLookup.Sync();
+              });
+
+            return Task.CompletedTask;
         }
     }
 }
