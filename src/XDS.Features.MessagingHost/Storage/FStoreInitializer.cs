@@ -15,6 +15,11 @@ namespace XDS.Features.MessagingHost.Storage
                 fStore.CreateTable(identitiesTable);
             FStoreTables.TableConfig[typeof(XIdentity)] = identitiesTable;
 
+            var groupsTable = new FSTable(nameof(XGroup), IdMode.UserGenerated); // Id is necessary to retrieve an item
+            if (!fStore.TableExists(groupsTable, null))
+                fStore.CreateTable(groupsTable);
+            FStoreTables.TableConfig[typeof(XGroup)] = groupsTable;
+
             var messagesTable = new FSTable(nameof(XMessage), IdMode.UserGenerated, true, false); // e.g. /tbl_XMessage/1234567890/ac59f6f8-6e93-e185-d01a-94220b30d216
 			if (!fStore.TableExists(messagesTable, null))                
                 fStore.CreateTable(messagesTable);

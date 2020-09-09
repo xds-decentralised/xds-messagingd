@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using XDS.Features.MessagingHost.RequestHandler;
 using XDS.SDK.Cryptography.Api.Infrastructure;
 using XDS.SDK.Messaging.CrossTierTypes;
 using XDS.SDK.Messaging.CrossTierTypes.FStore;
@@ -17,6 +17,7 @@ namespace XDS.Features.MessagingHost.Storage
         static readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
 
         readonly IAsyncRepository<XIdentity> identitiesRepository;
+        readonly IAsyncRepository<XGroup> groupsRepository;
         readonly IAsyncRepository<XMessage> messagesRepository;
         readonly IAsyncRepository<XResendRequest> resendRequestsRepository;
         readonly ILogger logger;
@@ -29,6 +30,7 @@ namespace XDS.Features.MessagingHost.Storage
         {
             this.logger = loggerFactory.CreateLogger(this.GetType().FullName);
             this.identitiesRepository = new FStoreRepository<XIdentity>(new FStoreMono(fStoreConfig), XIdentityExtensions.SerializeXIdentity, XIdentityExtensions.DeserializeXIdentityCore);
+            this.groupsRepository = new FStoreRepository<XGroup>(new FStoreMono(fStoreConfig), XGroupExtensions.SerializeXGroup, XGroupExtensions.DeserializeXGroup);
             this.messagesRepository = new FStoreRepository<XMessage>(new FStoreMono(fStoreConfig), XMessageExtensions.SerializeCore, XMessageExtensions.DeserializeMessage);
             this.resendRequestsRepository = new FStoreRepository<XResendRequest>(new FStoreMono(fStoreConfig), XResendRequestExtensions.Serialize, XResendRequestExtensions.DeserializeResendRequest);
             this.statsWatch = new Stopwatch();
@@ -191,7 +193,7 @@ namespace XDS.Features.MessagingHost.Storage
             {
                 var foundIndentity = await this.identitiesRepository.Get(identityId);
                 if (foundIndentity == null)
-                    return new XIdentity { Id = identityId, ContactState = ContactState.NonExistent };
+                    throw new CommandProtocolException($"Identity '{identityId}' was not found.");
                 return foundIndentity;
             }
             finally
@@ -283,6 +285,71 @@ namespace XDS.Features.MessagingHost.Storage
                     TotalMessagesDelivered = this.totalMessagesDelivered,
                     Time = this.statsWatch.ElapsedMilliseconds
                 };
+            }
+            finally
+            {
+                SemaphoreSlim.Release();
+            }
+        }
+
+        public async Task<bool> TryAddOrUpdateGroup(XGroup xGroup, Action<string, byte[]> initTLSUser)
+        {
+            await SemaphoreSlim.WaitAsync();
+
+            // todo: verify by signature check that the publisher can publish/update the item
+            try
+            {
+                if (xGroup == null)
+                    throw new ArgumentNullException(nameof(XIdentity));
+                if (xGroup.Id == null)
+                    throw new ArgumentNullException(nameof(XIdentity.Id));
+                if (xGroup.PublicKey == null)
+                    throw new ArgumentNullException(nameof(XIdentity.PublicIdentityKey));
+                if (ChatId.GenerateChatId(xGroup.PublicKey) != xGroup.Id)
+                    throw new Exception("Id and public key are unrelated.");
+
+                xGroup.LocalContactState = ContactState.Valid;
+
+                XGroup existing = await this.groupsRepository.Get(xGroup.Id);
+                if (existing == null)
+                {
+                    xGroup.LocalCreatedDate = DateTime.UtcNow;
+                    xGroup.LocalModifiedDate = xGroup.LocalCreatedDate;
+                    await this.groupsRepository.Add(xGroup);
+                    this.logger.LogInformation($"Group {xGroup.Id} was published.", nameof(MessageNodeRepository));
+                    return true;
+                }
+                else
+                {
+                    if (!ByteArrays.AreAllBytesEqual(xGroup.PublicKey, existing.PublicKey))
+                    {
+                        throw new Exception($"Different new PublicKey for {xGroup.Id}. Ignoring request!");
+                    }
+                    existing.LocalModifiedDate = DateTime.UtcNow;
+                    await this.groupsRepository.Update(existing);
+                }
+
+
+                if (initTLSUser != null) // TLS
+                    initTLSUser(xGroup.Id, xGroup.PublicKey);
+
+                return false;
+            }
+            finally
+            {
+                SemaphoreSlim.Release();
+            }
+        }
+
+        public async Task<XGroup> GetGroupAsync(string groupId)
+        {
+            await SemaphoreSlim.WaitAsync();
+            try
+            {
+                var xGroup = await this.groupsRepository.Get(groupId);
+                if (xGroup == null)
+                    throw new CommandProtocolException($"Group '{groupId}' was not found.");
+                return xGroup;
             }
             finally
             {

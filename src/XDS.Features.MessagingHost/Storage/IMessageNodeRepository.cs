@@ -8,12 +8,21 @@ namespace XDS.Features.MessagingHost.Storage
     public interface IMessageNodeRepository
     {
         Task<byte> AnyNews(string recipientId);
+
 	    Task<byte> CheckForResendRequest(XResendRequest resendRequestQuery);
 
 		Task<IReadOnlyList<XMessage>> GetMessages(string myId);
+
         Task<bool> TryAddIdentity(XIdentity identity, Action<string, byte[]> initTLSUser);
+
         Task<XIdentity> GetIdentityAsync(string identityId);
+
+        Task<bool> TryAddOrUpdateGroup(XGroup xGroup, Action<string, byte[]> initTLSUser);
+
+        Task<XGroup> GetGroupAsync(string groupId);
+       
         Task<bool> TryAddMessage(XMessage message);
+
 		Task<bool> TryAddResendRequest(XResendRequest resendRequest);
 
         Task<IReadOnlyList<XIdentity>> GetAllIdentities();

@@ -52,6 +52,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.Features.ItemForwarding
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XDS.Features.Photon", "src\XDS.Features.Photon\XDS.Features.Photon.csproj", "{043A05A6-A93B-4957-A960-07E80CB1EC65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XDS.SDK.Core", "src\submodules\xds-sdk\src\XDS.SDK.Core\XDS.SDK.Core.csproj", "{AFEB2791-FD13-4580-9085-410139A30027}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -212,6 +214,14 @@ Global
 		{043A05A6-A93B-4957-A960-07E80CB1EC65}.Release|Any CPU.Build.0 = Release|Any CPU
 		{043A05A6-A93B-4957-A960-07E80CB1EC65}.Release|x64.ActiveCfg = Release|Any CPU
 		{043A05A6-A93B-4957-A960-07E80CB1EC65}.Release|x64.Build.0 = Release|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Debug|x64.Build.0 = Debug|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Release|x64.ActiveCfg = Release|Any CPU
+		{AFEB2791-FD13-4580-9085-410139A30027}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -234,6 +244,7 @@ Global
 		{EFFF261B-C3A0-4D4C-9F5B-6B5D8240615C} = {CE511120-6C15-4BD4-A489-E256D6D2BBFF}
 		{64770BD5-D117-4E1F-B356-5A8DE47E102F} = {EFFF261B-C3A0-4D4C-9F5B-6B5D8240615C}
 		{EAB265CF-5FAB-4EC3-9256-272A29B3BD75} = {EFFF261B-C3A0-4D4C-9F5B-6B5D8240615C}
+		{AFEB2791-FD13-4580-9085-410139A30027} = {EFFF261B-C3A0-4D4C-9F5B-6B5D8240615C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CBA18ED0-9588-4BC0-939A-4E9E827D0438}

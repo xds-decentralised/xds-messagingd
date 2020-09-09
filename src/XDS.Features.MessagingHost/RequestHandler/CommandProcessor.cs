@@ -88,6 +88,24 @@ namespace XDS.Features.MessagingHost.RequestHandler
                        
                         return new RequestCommand(CommandId.PublishIdentity_Response, identityBeingPublished.Id).Serialize(CommandHeader.Yes);
                     }
+                case CommandId.GetGroup:
+                {
+                    var groupId = command.CommandData.DeserializeStringCore();
+                    XGroup xGroup = await this.messageNodeRepository.GetGroupAsync(groupId);
+                    return new RequestCommand(CommandId.GetGroup_Response, xGroup).Serialize(CommandHeader.Yes);
+                }
+                case CommandId.PublishGroup:
+                {
+                    XGroup xGroup = command.CommandData.DeserializeXGroup();
+                    var success = await this.messageNodeRepository.TryAddOrUpdateGroup(xGroup, null);
+
+                    // We only forward items when we received them the first time. Otherwise, we'll endlessly 
+                    // forward the item, when we receive them back from other nodes, forward them, receive them back and so on.
+                    if (success)
+                        this.itemForwarding.PushAndForget(command);
+
+                    return new RequestCommand(CommandId.PublishIdentity_Response, xGroup.Id).Serialize(CommandHeader.Yes);
+                }
                 case CommandId.PhotonBalance:
                     {
                         string address_options = command.CommandData.DeserializeStringCore();
